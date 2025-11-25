@@ -1,4 +1,7 @@
 package domain;
 
-public class StatutTentative {
+public enum StatutTentative {
+    EN_COURS,
+    SOUMISE,
+    EXPIREE
 }

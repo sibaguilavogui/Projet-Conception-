@@ -1,4 +1,9 @@
 package domain;
 
-public class TypeEvenement {
+public enum TypeEvenement {
+    LOGIN,
+    DEMARRER_EXAMEN,
+    SAUVEGARDE,
+    SOUMISSION,
+    LOGOUT
 }

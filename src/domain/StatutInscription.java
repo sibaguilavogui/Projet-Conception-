@@ -1,4 +1,6 @@
 package domain;
 
-public class StatutInscription {
+public enum StatutInscription {
+    ACTIVE,
+    SUSPENDUE
 }
