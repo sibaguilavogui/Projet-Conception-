@@ -43,7 +43,15 @@ public class Tentative {
                 .orElse(null);
 
         if (rep == null) {
-            Question q = examen.getQuestion(questionId);
+            List<Question> toutesLesQuestions = examen.getQuestions();
+            Question q = toutesLesQuestions.stream()
+                    .filter(question -> question.getId().equals(questionId))
+                    .findFirst()
+                    .orElse(null);
+            if (q == null) {
+                System.out.println("Aucune question avec l'id " + questionId);
+                return;
+            }
             rep = new ReponseDonnee(q);
             this.addReponse(rep);
         }
