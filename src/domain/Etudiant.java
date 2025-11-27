@@ -1,15 +1,28 @@
 package domain;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 public class Etudiant extends Utilisateur {
 
-    private String numeroEtudiant;
-    private String programme;   // ex: "Génie informatique"
+    // ✅ Constructeur utilisé par ton Main (avec infos pour codePermanent)
+    public Etudiant(String email,
+                    String motDePasseEnClair,
+                    String prenom,
+                    String nom,
+                    String departement,
+                    LocalDate dateNaissance) {
+        super(email, motDePasseEnClair, Role.ETUDIANT, prenom, nom, departement, dateNaissance);
+    }
 
-    public Etudiant() {
-        super();
-        setRole(Role.ETUDIANT);
+    // ✅ Compatibilité (ancien)
+    public Etudiant(String email, String motDePasseEnClair) {
+        super(email, motDePasseEnClair, Role.ETUDIANT);
+    }
+
+    // ✅ Compatibilité (si tu construis depuis hash/UUID quelque part)
+    public Etudiant(UUID id, String email, String motDePasseHash) {
+        super(id, email, motDePasseHash, Role.ETUDIANT);
     }
 
     public Etudiant(UUID id,
@@ -17,32 +30,8 @@ public class Etudiant extends Utilisateur {
                     String motDePasseHash,
                     String prenom,
                     String nom,
-                    String numeroEtudiant,
-                    String programme) {
-        super(id, email, motDePasseHash, Role.ETUDIANT, prenom, nom);
-        this.numeroEtudiant = numeroEtudiant;
-        this.programme = programme;
-    }
-
-    public String getNumeroEtudiant() {
-        return numeroEtudiant;
-    }
-
-    public void setNumeroEtudiant(String numeroEtudiant) {
-        this.numeroEtudiant = numeroEtudiant;
-    }
-
-    public String getProgramme() {
-        return programme;
-    }
-
-    public void setProgramme(String programme) {
-        this.programme = programme;
-    }
-
-    public boolean estDansProgramme(String programme) {
-        return this.programme != null && this.programme.equalsIgnoreCase(programme);
+                    String departement,
+                    LocalDate dateNaissance) {
+        super(id, email, motDePasseHash, Role.ETUDIANT, prenom, nom, departement, dateNaissance);
     }
 }
-
-

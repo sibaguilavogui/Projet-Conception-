@@ -1,49 +1,33 @@
 package domain;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 public class ReponseDonnee {
     private final UUID id;
-    private Question question;
+    private final Question question;
     private String contenu;
-    private double notePartielle;
-    private LocalDateTime derniereSauvegarde;
+    private LocalDateTime dateMaj;
 
     public ReponseDonnee(Question question) {
-        this.id = UUID.randomUUID();
-        this.question = question;
-        this.contenu = "";
-        this.notePartielle = 0.0;
-        this.derniereSauvegarde = null;
+        this(UUID.randomUUID(), question, null, null);
     }
 
-    public UUID getId() {
-        return id;
-    }
-    public Question getQuestion() {
-        return question;
-    }
-    public String getContenu() {
-        return contenu;
+    public ReponseDonnee(UUID id, Question question, String contenu, LocalDateTime dateMaj) {
+        this.id = (id != null) ? id : UUID.randomUUID();
+        this.question = Objects.requireNonNull(question, "question ne doit pas être null");
+        this.contenu = contenu;
+        this.dateMaj = dateMaj;
     }
 
-    public void mettreAJourContenu(String nouveau) {
-        this.contenu = nouveau;
-        this.derniereSauvegarde = LocalDateTime.now();
+    public void mettreAJourContenu(String contenu, LocalDateTime now) {
+        this.contenu = contenu;
+        this.dateMaj = now;
     }
 
-    public double getNotePartielle() {
-        return notePartielle;
-    }
-
-    public void noterPatiellement(double note) {
-        this.notePartielle = note;
-    }
-
-    public LocalDateTime getDerniereSauvegarde() {
-        return derniereSauvegarde;
-    }
-
+    public UUID getId() { return id; }
+    public Question getQuestion() { return question; }
+    public String getContenu() { return contenu; }
+    public LocalDateTime getDateMaj() { return dateMaj; }
 }
-

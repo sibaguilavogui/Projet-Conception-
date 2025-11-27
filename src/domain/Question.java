@@ -6,22 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * Représente une question d'examen.
- *
- * Attributs (UML) :
- *  - id : UUID
- *  - enonce : String
- *  - type : TypeQuestion
- *  - bareme : double
- *  - reponsesPossibles : List<ReponsePossible>
- *
- * Méthodes (UML) :
- *  + ajouterReponsePossible(r: ReponsePossible): void
- *  + retirerReponsePossible(repid: UUID): void
- *  + estValide(): boolean
- *  + corriger(contenu: String): double
- */
 public class Question {
 
     private UUID id;
@@ -29,12 +13,6 @@ public class Question {
     private TypeQuestion type;
     private double bareme;
     private final List<ReponsePossible> reponsesPossibles;
-
-    // ---------- Constructeurs ----------
-
-    public Question() {
-        this(UUID.randomUUID(), "", null, 0.0);
-    }
 
     public Question(UUID id, String enonce, TypeQuestion type, double bareme) {
         this.id = (id != null) ? id : UUID.randomUUID();
@@ -44,99 +22,101 @@ public class Question {
         this.reponsesPossibles = new ArrayList<>();
     }
 
-    // ---------- Méthodes UML ----------
-
-    public void ajouterReponsePossible(ReponsePossible r) {
-        Objects.requireNonNull(r, "La réponse possible ne doit pas être null");
-        this.reponsesPossibles.add(r);
+    public Question(String enonce, TypeQuestion type, double bareme) {
+        this(UUID.randomUUID(), enonce, type, bareme);
     }
 
+    // ===================== FACTORIES (pour ton Main) =====================
+
+    /** QCM auto: 1 bonne + 2 mauvaises */
+    public static Question creerQcmAuto(String enonce, double bareme,
+                                        String bonne, String mauvaise1, String mauvaise2) {
+        Question q = new Question(enonce, TypeQuestion.QCM, bareme);
+
+        // ⚠️ SI TON CONSTRUCTEUR ReponsePossible(...) est différent,
+        // remplace les 3 lignes new ReponsePossible(...) par ton constructeur à toi.
+        q.ajouterReponsePossible(new ReponsePossible(bonne, true));
+        q.ajouterReponsePossible(new ReponsePossible(mauvaise1, false));
+        q.ajouterReponsePossible(new ReponsePossible(mauvaise2, false));
+
+        return q;
+    }
+
+    /** Question courte: 1 réponse correcte attendue */
+    public static Question creerCourte(String enonce, double bareme, String reponseAttendue) {
+        Question q = new Question(enonce, TypeQuestion.COURTE, bareme);
+        q.ajouterReponsePossible(new ReponsePossible(reponseAttendue, true));
+        return q;
+    }
+
+    /** Vrai/Faux: correct=true => "vrai" est correct, sinon "faux" est correct */
+    public static Question creerVraiFaux(String enonce, double bareme, boolean correct) {
+        Question q = new Question(enonce, TypeQuestion.VRAI_FAUX, bareme);
+        q.ajouterReponsePossible(new ReponsePossible("vrai", correct));
+        q.ajouterReponsePossible(new ReponsePossible("faux", !correct));
+        return q;
+    }
+
+    // ====================================================================
+
+    // UML: ajouterReponsePossible(rep: ReponsePossible): void
+    public void ajouterReponsePossible(ReponsePossible rep) {
+        Objects.requireNonNull(rep, "rep ne doit pas être null");
+        this.reponsesPossibles.add(rep);
+    }
+
+    // UML: retirerReponsePossible(repId: UUID): void
     public void retirerReponsePossible(UUID repId) {
-        if (repId == null) {
-            return;
-        }
+        if (repId == null) return;
         reponsesPossibles.removeIf(r -> repId.equals(r.getId()));
     }
 
-    /**
-     * Vérifie si la question est "valide".
-     * Ici on considère :
-     *  - énoncé non vide
-     *  - barème > 0
-     *  - au moins une réponse possible
-     *
-     * Si plus tard vous voulez ajouter la règle "au moins une réponse correcte",
-     * il suffira de modifier cette méthode (modifiabilité).
-     */
+    // UML: estValide(): boolean
     public boolean estValide() {
-        return enonce != null
-                && !enonce.isBlank()
-                && bareme > 0
-                && !reponsesPossibles.isEmpty();
+        if (enonce == null || enonce.isBlank()) return false;
+        if (type == null) return false;
+        if (bareme <= 0) return false;
+
+        // ✅ COURTE = correction manuelle => pas besoin de reponsesPossibles
+        if (type == TypeQuestion.COURTE) return true;
+
+        // ✅ QCM / VRAI_FAUX => il faut des choix
+        return !reponsesPossibles.isEmpty();
     }
 
-    /**
-     * Corrige une réponse donnée sous forme de texte.
-     *
-     * Implémentation simple :
-     *  - si le contenu correspond à une réponse marquée correcte,
-     *    on renvoie le barème complet.
-     *  - sinon 0.
-     *
-     * Si plus tard vous voulez des points partiels ou plusieurs bonnes réponses,
-     * il suffira de changer cette logique ici.
-     */
     public double corriger(String contenu) {
-        if (contenu == null) {
+        if (type == TypeQuestion.COURTE) {
+            // ✅ pas de correction automatique pour COURTE
             return 0.0;
         }
 
+        if (contenu == null) return 0.0;
+        String c = contenu.trim();
+
+        // QCM / VRAI_FAUX
         for (ReponsePossible r : reponsesPossibles) {
-            if (contenu.equals(r.getLibelle())) {
+            if (r.getLibelle() == null) continue;
+            if (c.equals(r.getLibelle().trim())) {
                 return r.isCorrecte() ? bareme : 0.0;
             }
         }
         return 0.0;
     }
 
-    // ---------- Getters / Setters ----------
 
-    public UUID getId() {
-        return id;
-    }
 
-    public void setId(UUID id) {
-        this.id = (id != null) ? id : UUID.randomUUID();
-    }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = (id != null) ? id : UUID.randomUUID(); }
 
-    public String getEnonce() {
-        return enonce;
-    }
+    public String getEnonce() { return enonce; }
+    public void setEnonce(String enonce) { this.enonce = enonce; }
 
-    public void setEnonce(String enonce) {
-        this.enonce = enonce;
-    }
+    public TypeQuestion getType() { return type; }
+    public void setType(TypeQuestion type) { this.type = type; }
 
-    public TypeQuestion getType() {
-        return type;
-    }
+    public double getBareme() { return bareme; }
+    public void setBareme(double bareme) { this.bareme = bareme; }
 
-    public void setType(TypeQuestion type) {
-        this.type = type;
-    }
-
-    public double getBareme() {
-        return bareme;
-    }
-
-    public void setBareme(double bareme) {
-        this.bareme = bareme;
-    }
-
-    /**
-     * Vue non modifiable de la liste des réponses possibles.
-     * Pour ajouter / retirer, utiliser les méthodes prévues.
-     */
     public List<ReponsePossible> getReponsesPossibles() {
         return Collections.unmodifiableList(reponsesPossibles);
     }

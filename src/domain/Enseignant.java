@@ -1,15 +1,28 @@
 package domain;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 public class Enseignant extends Utilisateur {
 
-    private String numeroEmploye;
-    private String departement; // ex: "Informatique et mathématique"
+    // ✅ Constructeur utilisé par ton Main (avec infos pour codePermanent)
+    public Enseignant(String email,
+                      String motDePasseEnClair,
+                      String prenom,
+                      String nom,
+                      String departement,
+                      LocalDate dateNaissance) {
+        super(email, motDePasseEnClair, Role.ENSEIGNANT, prenom, nom, departement, dateNaissance);
+    }
 
-    public Enseignant() {
-        super();
-        setRole(Role.ENSEIGNANT);
+    // ✅ Compatibilité (ancien)
+    public Enseignant(String email, String motDePasseEnClair) {
+        super(email, motDePasseEnClair, Role.ENSEIGNANT);
+    }
+
+    // ✅ Compatibilité (si tu construis depuis hash/UUID quelque part)
+    public Enseignant(UUID id, String email, String motDePasseHash) {
+        super(id, email, motDePasseHash, Role.ENSEIGNANT);
     }
 
     public Enseignant(UUID id,
@@ -17,27 +30,8 @@ public class Enseignant extends Utilisateur {
                       String motDePasseHash,
                       String prenom,
                       String nom,
-                      String numeroEmploye,
-                      String departement) {
-        super(id, email, motDePasseHash, Role.ENSEIGNANT, prenom, nom);
-        this.numeroEmploye = numeroEmploye;
-        this.departement = departement;
-    }
-
-    public String getNumeroEmploye() {
-        return numeroEmploye;
-    }
-
-    public void setNumeroEmploye(String numeroEmploye) {
-        this.numeroEmploye = numeroEmploye;
-    }
-
-    public String getDepartement() {
-        return departement;
-    }
-
-    public void setDepartement(String departement) {
-        this.departement = departement;
+                      String departement,
+                      LocalDate dateNaissance) {
+        super(id, email, motDePasseHash, Role.ENSEIGNANT, prenom, nom, departement, dateNaissance);
     }
 }
-

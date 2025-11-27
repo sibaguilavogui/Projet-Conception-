@@ -1,121 +1,193 @@
 package domain;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class Tentative {
 
-    private final UUID id;
-    private LocalDateTime debut = LocalDateTime.now();
+    private UUID id;
+    private LocalDateTime debut;
     private LocalDateTime fin;
     private StatutTentative statut;
-    private double score;
+    private double score; // score total (auto + manuel)
+
     private Examen examen;
     private Etudiant etudiant;
     private final List<ReponseDonnee> reponses;
 
-    public Tentative(Examen examen, Etudiant etudiant) {
-        this.id = UUID.randomUUID();
-        this.debut = LocalDateTime.now();
-        this.fin = examen.getDateFin();
-        this.examen = examen;
-        this.etudiant = etudiant;
+    // ✅ Notes/commentaires manuels par questionId (surtout pour COURTE)
+    private final Map<UUID, Double> notesManuelles = new HashMap<>();
+    private final Map<UUID, String> commentairesManuels = new HashMap<>();
+
+    public Tentative(UUID id,
+                     LocalDateTime debut,
+                     LocalDateTime fin,
+                     StatutTentative statut,
+                     double score,
+                     Examen examen,
+                     Etudiant etudiant) {
+
+        this.id = (id != null) ? id : UUID.randomUUID();
+        this.debut = debut;
+        this.fin = fin;
+        this.statut = (statut != null) ? statut : StatutTentative.EN_COURS;
+        this.score = score;
+        this.examen = Objects.requireNonNull(examen, "examen ne doit pas être null");
+        this.etudiant = Objects.requireNonNull(etudiant, "etudiant ne doit pas être null");
         this.reponses = new ArrayList<>();
-        this.score = 0;
+    }
+
+    public Tentative(Examen examen, Etudiant etudiant) {
+        this(UUID.randomUUID(), null, null, StatutTentative.EN_COURS, 0.0, examen, etudiant);
+    }
+
+    public void demarrer(LocalDateTime now) {
+        Objects.requireNonNull(now, "now ne doit pas être null");
+        if (debut != null) return; // déjà démarrée
+        this.debut = now;
         this.statut = StatutTentative.EN_COURS;
     }
 
-    public void demarrer() {
-        this.debut = LocalDateTime.now();
-    }
-
-    public int tempsRestant() {
-        if (fin == null) return 0;
-        return (int) java.time.Duration.between(LocalDateTime.now(), fin).getSeconds();
+    public int tempsRestant(LocalDateTime now) {
+        Objects.requireNonNull(now, "now ne doit pas être null");
+        LocalDateTime deadline = calculerDeadline();
+        if (deadline == null) return 0;
+        long mins = Duration.between(now, deadline).toMinutes();
+        return (int) Math.max(0, mins);
     }
 
     public void sauvegarderReponse(UUID questionId, String contenu, LocalDateTime now) {
-        ReponseDonnee rep = reponses.stream()
-                .filter(r -> r.getQuestion().getId().equals(questionId))
-                .findFirst()
-                .orElse(null);
+        Objects.requireNonNull(now, "now ne doit pas être null");
+        if (!peutModifier(now)) return;
 
-        if (rep == null) {
-            Question q = examen.getQuestion(questionId);
-            rep = new ReponseDonnee(q);
-            this.addReponse(rep);
+        Question q = examen.trouverQuestion(questionId);
+        if (q == null) return;
+
+        ReponseDonnee rd = trouverReponse(questionId);
+        if (rd == null) {
+            rd = new ReponseDonnee(q);
+            reponses.add(rd);
         }
-        rep.mettreAJourContenu(contenu);
+        rd.mettreAJourContenu(contenu, now);
     }
 
-    public void soumettre() {
-        this.fin = LocalDateTime.now();
-        this.statut = StatutTentative.SOUMISE;
-        this.score = calculerScoreAuto();
+    public void soumettre(LocalDateTime now) {
+        Objects.requireNonNull(now, "now ne doit pas être null");
+        if (statut != StatutTentative.EN_COURS) return;
+
+        this.fin = now;
+        this.statut = estExpiree(now) ? StatutTentative.EXPIREE : StatutTentative.SOUMISE;
+
+        // ✅ score total = auto + (manuel déjà saisi éventuellement)
+        recalculerScoreTotal();
     }
 
-    public boolean estExpiree() {
-        return fin != null && LocalDateTime.now().isAfter(fin);
+    public boolean estExpiree(LocalDateTime now) {
+        Objects.requireNonNull(now, "now ne doit pas être null");
+        LocalDateTime deadline = calculerDeadline();
+        return deadline != null && now.isAfter(deadline);
     }
 
+    // ===== AUTO =====
     public double calculerScoreAuto() {
-        return reponses.stream()
-                .mapToDouble(ReponseDonnee::getNotePartielle)
-                .sum();
+        double total = 0.0;
+        for (ReponseDonnee rd : reponses) {
+            if (rd.getQuestion() == null) continue;
+            total += rd.getQuestion().corriger(rd.getContenu());
+        }
+        return total;
     }
 
+    // ===== MANUEL (COURTE) =====
+
+    // ✅ Méthode appelée par ton Main
+    public void noterManuellement(UUID questionId, double note, String commentaire) {
+        if (questionId == null) return;
+
+        Question q = examen.trouverQuestion(questionId);
+        if (q == null) throw new IllegalArgumentException("Question introuvable: " + questionId);
+
+        // borne 0..barème
+        double n = Math.max(0.0, Math.min(note, q.getBareme()));
+
+        notesManuelles.put(questionId, n);
+
+        if (commentaire == null || commentaire.isBlank()) {
+            commentairesManuels.remove(questionId);
+        } else {
+            commentairesManuels.put(questionId, commentaire.trim());
+        }
+
+        // ✅ met à jour score total
+        recalculerScoreTotal();
+    }
+
+    // ✅ (compat) ton ancien code peut continuer à l'utiliser
     public void appliquerNoteManuelle(UUID questionId, double note) {
-        reponses.stream()
-                .filter(r -> r.getQuestion().getId().equals(questionId))
-                .findFirst()
-                .ifPresent(r -> r.noterPatiellement(note));
+        noterManuellement(questionId, note, null);
     }
 
-    public UUID getId() {
-        return id;
+    // ✅ Méthodes appelées par ton Main (pour afficher détail)
+    public Double getNoteManuelle(UUID questionId) {
+        return questionId == null ? null : notesManuelles.get(questionId);
     }
-    public LocalDateTime getFin() {
-        return fin;
+
+    public String getCommentaireManuel(UUID questionId) {
+        return questionId == null ? null : commentairesManuels.get(questionId);
     }
-    public void setFin(LocalDateTime fin) {
-        this.fin = fin;
-    }
-    public LocalDateTime getDebut() {
-        return debut;
-    }
-    public void setDebut(LocalDateTime debut) {
-        this.debut = debut;
-    }
-    public StatutTentative getStatut() {
-        return statut;
-    }
-    public void setStatut(StatutTentative statut) {
-        this.statut = statut;
-    }
-    public double getScore() {
+
+    // ✅ score total visible étudiant/prof
+    public double getScoreTotal() {
         return score;
     }
-    public void setScore(double score) {
-        this.score = score;
+
+    private void recalculerScoreTotal() {
+        double auto = calculerScoreAuto();
+        double manuel = 0.0;
+        for (Double v : notesManuelles.values()) {
+            if (v != null) manuel += v;
+        }
+        this.score = auto + manuel;
     }
-    public Examen getExamen() {
-        return examen;
+
+    // -------- Helpers privés --------
+    private LocalDateTime calculerDeadline() {
+        if (debut == null) return null;
+
+        LocalDateTime deadlineParDuree = debut.plusMinutes(Math.max(0, examen.getDureeMinutes()));
+        LocalDateTime finExamen = examen.getDateFin();
+
+        if (finExamen == null) return deadlineParDuree;
+        return deadlineParDuree.isBefore(finExamen) ? deadlineParDuree : finExamen;
     }
-    public void setExamen(Examen examen) {
-        this.examen = examen;
+
+    private boolean peutModifier(LocalDateTime now) {
+        if (statut != StatutTentative.EN_COURS) return false;
+        if (debut == null) return false;
+        if (estExpiree(now)) {
+            this.statut = StatutTentative.EXPIREE;
+            this.fin = now;
+            return false;
+        }
+        return true;
     }
-    public Etudiant getEtudiant() {
-        return etudiant;
+
+    private ReponseDonnee trouverReponse(UUID questionId) {
+        if (questionId == null) return null;
+        for (ReponseDonnee r : reponses) {
+            if (r.getQuestion() != null && questionId.equals(r.getQuestion().getId())) return r;
+        }
+        return null;
     }
-    public void setEtudiant(Etudiant etudiant) {
-        this.etudiant = etudiant;
-    }
-    public List<ReponseDonnee> getReponses() {
-        return reponses;
-    }
-    public void addReponse(ReponseDonnee reponse) {
-        this.reponses.add(reponse);
-    }
+
+    // ---------- Getters ----------
+    public UUID getId() { return id; }
+    public LocalDateTime getDebut() { return debut; }
+    public LocalDateTime getFin() { return fin; }
+    public StatutTentative getStatut() { return statut; }
+    public double getScore() { return score; } // maintenant = total
+    public Examen getExamen() { return examen; }
+    public Etudiant getEtudiant() { return etudiant; }
+    public List<ReponseDonnee> getReponses() { return Collections.unmodifiableList(reponses); }
 }
