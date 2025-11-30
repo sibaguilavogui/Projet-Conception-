@@ -1,92 +1,153 @@
 package ca.uqac.examgu.service;
 
-import ca.uqac.examgu.model.Enseignant;
-import ca.uqac.examgu.model.Etudiant;
 import ca.uqac.examgu.model.Utilisateur;
+import ca.uqac.examgu.model.Enumerations.TypeEvenement;
 import ca.uqac.examgu.repository.UtilisateurRepository;
-import ca.uqac.examgu.security.UtilisateurDetailsImpl;
-import ca.uqac.examgu.model.TypeEvenement;
-import ca.uqac.examgu.service.JournalisationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
+@Transactional
 public class AuthService {
 
     private final JournalisationService journalisationService;
-    private final UtilisateurRepository repo;
-    private final PasswordEncoder encoder;
+    private final UtilisateurRepository utilisateurRepository;
     private final AuthenticationManager authenticationManager;
-    private final UtilisateurDetailsServiceImpl utilisateurDetailsService;
 
-    public AuthService(UtilisateurRepository repo,
-                       PasswordEncoder encoder,
-                       JournalisationService journalisationService, AuthenticationManager authenticationManager, UtilisateurDetailsServiceImpl utilisateurDetailsService) {
-        this.repo = repo;
-        this.encoder = encoder;
+    public AuthService(UtilisateurRepository utilisateurRepository,
+                       JournalisationService journalisationService,
+                       AuthenticationManager authenticationManager) {
+        this.utilisateurRepository = utilisateurRepository;
         this.journalisationService = journalisationService;
         this.authenticationManager = authenticationManager;
-        this.utilisateurDetailsService = utilisateurDetailsService;
     }
 
+    public static class LoginResponse {
+        private String message;
+        private UUID userId;
+        private String email;
+        private String nom;
+        private String prenom;
+        private String role;
+        private LocalDateTime dateConnexion;
 
-    public ResponseEntity<?> registerEtudiant(Etudiant e) {
-        e.setMotDePasseHash(encoder.encode(e.getMotDePasseHash()));
-        Utilisateur saved = repo.save(e);
-        journalisationService.log(
-                TypeEvenement.LOGIN,
-                saved.getEmail(),
-                "Compte créé avec le rôle " + saved.getRole()
-        );
-        return ResponseEntity.ok().body("Compte etudiant créé");
-    }
+        public LoginResponse(String message, UUID userId, String email, String nom,
+                             String prenom, String role, LocalDateTime dateConnexion) {
+            this.message = message;
+            this.userId = userId;
+            this.email = email;
+            this.nom = nom;
+            this.prenom = prenom;
+            this.role = role;
+            this.dateConnexion = dateConnexion;
+        }
 
-    public ResponseEntity<?> registerEnseignant(Enseignant e) {
-        e.setMotDePasseHash(encoder.encode(e.getMotDePasseHash()));
-        Utilisateur saved = repo.save(e);
-        journalisationService.log(
-                TypeEvenement.LOGIN,
-                saved.getEmail(),
-                "Compte créé avec le rôle " + saved.getRole()
-        );
-        return ResponseEntity.ok().body("Compte enseignant créé");
+        // Getters et Setters
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+
+        public UUID getUserId() { return userId; }
+        public void setUserId(UUID userId) { this.userId = userId; }
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+
+        public String getNom() { return nom; }
+        public void setNom(String nom) { this.nom = nom; }
+
+        public String getPrenom() { return prenom; }
+        public void setPrenom(String prenom) { this.prenom = prenom; }
+
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
+
+        public LocalDateTime getDateConnexion() { return dateConnexion; }
+        public void setDateConnexion(LocalDateTime dateConnexion) { this.dateConnexion = dateConnexion; }
     }
 
     public ResponseEntity<?> login(String email, String motDePasse) {
         try {
-            System.out.println("ICII0");
-            // 1. Charger l'utilisateur via ton service Spring Security (qui lui lit la base)
-            var userDetails = utilisateurDetailsService.loadUserByUsername(email);
-
-            // 2. Vérifier le mot de passe avec BCrypt
-            if (!encoder.matches(motDePasse, userDetails.getPassword())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("LOGIN FAIL ❌ accès refusé");
+            // Validation des paramètres
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("L'email est obligatoire");
+            }
+            if (motDePasse == null || motDePasse.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Le mot de passe est obligatoire");
             }
 
-            // 3. Créer un token Spring avec les authorities réelles
-            UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
+            // Vérifier si l'utilisateur existe
+            Optional<Utilisateur> utilisateurOpt = utilisateurRepository.findByEmail(email);
+            if (utilisateurOpt.isEmpty()) {
+                journalisationService.log(
+                        TypeEvenement.LOGIN,
+                        email,
+                        "Tentative de connexion échouée - Utilisateur non trouvé"
+                );
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Identifiants invalides");
+            }
 
-            // 4. Injecter dans le contexte de sécurité
-            SecurityContextHolder.getContext().setAuthentication(authToken);
+            // Authentifier avec Spring Security
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, motDePasse)
+            );
+            System.out.println(authentication.getName());
 
-            return ResponseEntity.ok("LOGIN OK ✅");
+            // Mettre à jour le contexte de sécurité
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("LOGIN FAIL ❌ accès refusé");
+            // Récupérer l'utilisateur authentifié
+            Utilisateur utilisateur = utilisateurOpt.get();
+
+            journalisationService.log(
+                    TypeEvenement.LOGIN,
+                    utilisateur.getEmail(),
+                    "Connexion réussie - Rôle: " + utilisateur.getRole()
+            );
+
+            // Préparer la réponse
+            LoginResponse response = new LoginResponse(
+                    "Connexion réussie",
+                    utilisateur.getId(),
+                    utilisateur.getEmail(),
+                    utilisateur.getNom(),
+                    utilisateur.getPrenom(),
+                    utilisateur.getRole().name(),
+                    LocalDateTime.now()
+            );
+
+            return ResponseEntity.ok(response);
+
+        } catch (BadCredentialsException e) {
+            journalisationService.log(
+                    TypeEvenement.LOGIN,
+                    email,
+                    "Tentative de connexion échouée - Mot de passe incorrect"
+            );
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Identifiants invalides");
+
+        } catch (Exception e) {
+            journalisationService.log(
+                    TypeEvenement.LOGIN,
+                    email,
+                    "Erreur lors de la connexion: " + e.getMessage()
+            );
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erreur lors de l'authentification: " + e.getMessage());
         }
     }
+
 }
-
-
-
-

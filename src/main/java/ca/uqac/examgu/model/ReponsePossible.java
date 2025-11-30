@@ -13,14 +13,9 @@ public class ReponsePossible {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
     private final String libelle;
-    private final boolean correcte;
+    private boolean correcte;
 
     public ReponsePossible(String libelle, boolean correcte) {
-        this(UUID.randomUUID(), libelle, correcte);
-    }
-
-    public ReponsePossible(UUID id, String libelle, boolean correcte) {
-        this.id = (id != null) ? id : UUID.randomUUID();
         this.libelle = libelle;
         this.correcte = correcte;
     }
@@ -28,4 +23,12 @@ public class ReponsePossible {
     public UUID getId() { return id; }
     public String getLibelle() { return libelle; }
     public boolean isCorrecte() { return correcte; }
+
+    public void marquerIncorrecte() {
+        this.correcte=false;
+    }
+
+    public void marquerCorrecte() {
+        this.correcte=true;
+    }
 }

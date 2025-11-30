@@ -15,12 +15,12 @@ public class UtilisateurDetailsImpl implements UserDetails {
 
     @Override
     public List<SimpleGrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + utilisateur.getRole().name()));
+        return List.of(new SimpleGrantedAuthority("ROLE_"+utilisateur.getRole().name()));
     }
 
     @Override
     public String getPassword() {
-        return utilisateur.getMotDePasseHash();
+        return utilisateur.getPassword();
     }
 
     @Override

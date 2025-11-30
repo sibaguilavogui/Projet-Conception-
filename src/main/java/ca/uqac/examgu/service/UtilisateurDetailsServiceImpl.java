@@ -3,13 +3,10 @@ package ca.uqac.examgu.service;
 import ca.uqac.examgu.model.Utilisateur;
 import ca.uqac.examgu.repository.UtilisateurRepository;
 import ca.uqac.examgu.security.UtilisateurDetailsImpl;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
 
 @Service
 public class UtilisateurDetailsServiceImpl implements UserDetailsService {

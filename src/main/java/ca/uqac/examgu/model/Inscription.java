@@ -1,39 +1,98 @@
 package ca.uqac.examgu.model;
 
+import ca.uqac.examgu.model.Enumerations.StatutInscription;
 import jakarta.persistence.*;
-
-import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
 @Entity
+@Table(name = "inscriptions")
 public class Inscription {
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
+
+    @Enumerated(EnumType.STRING)
+    private StatutInscription statut;
 
     @ManyToOne
     @JoinColumn(name = "etudiant_id")
-    private final Etudiant etudiant;
+    private Etudiant etudiant;
 
     @ManyToOne
     @JoinColumn(name = "examen_id")
-    private final Examen examen;
-    private boolean active = true;
-    private final LocalDateTime dateInscription = LocalDateTime.now();
+    private Examen examen;
 
-    public Inscription(UUID id, Etudiant etudiant, Examen examen) {
-        this.id = id;
-        this.etudiant = Objects.requireNonNull(etudiant);
-        this.examen = Objects.requireNonNull(examen);
+    public Inscription() {}
+
+    public Inscription(StatutInscription statut, Etudiant etudiant, Examen examen) {
+        this.statut = (statut != null) ? statut : StatutInscription.ACTIVE;
+        this.etudiant = Objects.requireNonNull(etudiant, "etudiant ne doit pas être null");
+        this.examen = Objects.requireNonNull(examen, "examen ne doit pas être null");
     }
 
-    public boolean estActive() { return active; }
-    public void desactiver() { this.active = false; }
-    public void activer() { this.active = true; }
+    public void activer() {
+        this.statut = StatutInscription.ACTIVE;
+    }
 
-    public Etudiant getEtudiant() { return etudiant; }
-    public Examen getExamen() { return examen; }
-    public LocalDateTime getDateInscription() { return dateInscription; }
+    public void suspendre() {
+        this.statut = StatutInscription.SUSPENDUE;
+    }
+
+    public boolean estActive() {
+        return this.statut == StatutInscription.ACTIVE;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public StatutInscription getStatut() {
+        return statut;
+    }
+
+    public void setStatut(StatutInscription statut) {
+        this.statut = statut;
+    }
+
+    public Etudiant getEtudiant() {
+        return etudiant;
+    }
+
+    public void setEtudiant(Etudiant etudiant) {
+        this.etudiant = etudiant;
+    }
+
+    public Examen getExamen() {
+        return examen;
+    }
+
+    public void setExamen(Examen examen) {
+        this.examen = examen;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Inscription)) return false;
+        Inscription that = (Inscription) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Inscription{id=%s, etudiant=%s, examen=%s, statut=%s}",
+                id, etudiant != null ? etudiant.getEmail() : "null",
+                examen != null ? examen.getTitre() : "null", statut);
+    }
 }

@@ -1,4 +1,4 @@
-package ca.uqac.examgu.model;
+package ca.uqac.examgu.model.Enumerations;
 
 public enum Role {
     ETUDIANT,
