@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import axios from 'axios';
 import './Login.css';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +20,9 @@ const Login = () => {
         password: password
       });
       
-      localStorage.setItem('token', response.data.token);
+      // Stocker les données utilisateur et le token
+      const { user: userData, token } = response.data;
+      login(userData, token);
 
     } catch (error) {
       console.error('Erreur de connexion:', error);
