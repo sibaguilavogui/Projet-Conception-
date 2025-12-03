@@ -6,6 +6,11 @@ public class EnseignantDTO {
     private String nom;
     private String prenom;
 
+    private String email;
+    private String password;
+    private String departement;
+    private LocalDate dateNaissance;
+
     public String getPrenom() {
         return prenom;
     }
@@ -13,11 +18,6 @@ public class EnseignantDTO {
     public void setPrenom(String prenom) {
         this.prenom = prenom;
     }
-
-    private String email;
-    private String password;
-    private String departement;
-    private LocalDate dateNaissance;
 
     public LocalDate getDateNaissance() {
         return dateNaissance;

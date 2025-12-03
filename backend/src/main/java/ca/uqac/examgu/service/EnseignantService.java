@@ -20,13 +20,21 @@ public class EnseignantService {
     private final UtilisateurRepository utilisateurRepository;
     private final EnseignantRepository enseignantRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ExamenRepository examenRepository;
+    private final InscriptionRepository inscriptionRepository;
+    private final TentativeRepository tentativeRepository;
+    private final QuestionRepository questionRepository;
 
     public EnseignantService(JournalisationService journalisationService, UtilisateurRepository utilisateurRepository,
-                             EnseignantRepository enseignantRepository,PasswordEncoder passwordEncoder) {
+                             EnseignantRepository enseignantRepository, PasswordEncoder passwordEncoder, ExamenRepository examenRepository, InscriptionRepository inscriptionRepository, TentativeRepository tentativeRepository, QuestionRepository questionRepository) {
         this.enseignantRepository = enseignantRepository;
         this.journalisationService = journalisationService;
         this.utilisateurRepository = utilisateurRepository;
         this.passwordEncoder = passwordEncoder;
+        this.examenRepository = examenRepository;
+        this.inscriptionRepository = inscriptionRepository;
+        this.tentativeRepository = tentativeRepository;
+        this.questionRepository = questionRepository;
     }
 
 
@@ -82,7 +90,20 @@ public class EnseignantService {
     public void supprimerEnseignant(UUID id) {
         Enseignant enseignant = enseignantRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Enseignant non trouvé"));
+        List<Examen> examensCrees = examenRepository.findByCreateur(enseignant);
 
+        if (!examensCrees.isEmpty()) {
+            // Supprimer d'abord toutes les inscriptions liées à ces examens
+            for (Examen examen : examensCrees) {
+                inscriptionRepository.deleteByExamen(examen);
+                // Supprimer aussi les questions, tentatives, etc.
+                questionRepository.deleteByExamen(examen);
+                tentativeRepository.deleteByExamen(examen);
+            }
+
+            // Ensuite supprimer les examens
+            examenRepository.deleteAll(examensCrees);
+        }
         enseignantRepository.delete(enseignant);
     }
 

@@ -39,8 +39,6 @@ public abstract class Question {
         this.examen=examen;
     }
 
-    public abstract boolean estValide();
-
     public abstract boolean estAutoCorrectible();
 
     public boolean estCorrigeableAutomatiquement() {

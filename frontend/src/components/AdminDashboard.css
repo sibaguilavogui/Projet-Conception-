@@ -114,3 +114,226 @@ th {
   background-color: #f8f9fa;
   font-weight: bold;
 }
+
+.user-type-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.btn-secondary.active {
+  background-color: #0055a4;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+  margin-bottom: 1rem;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  font-style: italic;
+  color: #6c757d;
+}
+
+.filter-section {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.filter-section label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.add-user-form {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.add-user-form h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.add-user-form label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.role-badge.info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.role-badge.connexion {
+  background-color: #28a745;
+  color: white;
+}
+
+.role-badge.deconnexion {
+  background-color: #6c757d;
+  color: white;
+}
+
+.role-badge.erreur {
+  background-color: #dc3545;
+  color: white;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+th, td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+  color: #333;
+}
+
+tr:hover {
+  background-color: #f5f5f5;
+}
+
+/* Styles pour les formulaires */
+.add-user-form input[type="text"],
+.add-user-form input[type="email"],
+.add-user-form input[type="password"],
+.add-user-form input[type="date"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.add-user-form input[type="text"]:focus,
+.add-user-form input[type="email"]:focus,
+.add-user-form input[type="password"]:focus,
+.add-user-form input[type="date"]:focus {
+  outline: none;
+  border-color: #0055a4;
+  box-shadow: 0 0 0 2px rgba(0, 85, 164, 0.2);
+}
+
+.add-user-form label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: bold;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.add-user-form .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .add-user-form .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.filter-section input[type="email"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.filter-section input[type="email"]:focus {
+  outline: none;
+  border-color: #0055a4;
+  box-shadow: 0 0 0 2px rgba(0, 85, 164, 0.2);
+}
+
+/* Amélioration de l'affichage des tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+th, td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+  color: #333;
+  position: sticky;
+  top: 0;
+}
+
+tr:hover {
+  background-color: #f5f5f5;
+}
+
+/* Amélioration des boutons */
+.btn-primary, .btn-secondary, .btn-edit, .btn-delete {
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover, .btn-secondary:hover, .btn-edit:hover, .btn-delete:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.btn-primary:active, .btn-secondary:active, .btn-edit:active, .btn-delete:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-tabs {
+    flex-direction: column;
+  }
+  
+  .tab {
+    width: 100%;
+    text-align: left;
+  }
+  
+  .tab-content {
+    padding: 1rem;
+  }
+  
+  .user-type-selector {
+    flex-direction: column;
+  }
+  
+  .user-type-selector button {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}

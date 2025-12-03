@@ -11,9 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -123,7 +122,6 @@ public class TentativeService {
     }
 
     public List<Tentative> getTentativesExamen(UUID examenId, UUID enseignantId) {
-        // Vérifier que l'enseignant est le créateur de l'examen
         Examen examen = examenRepository.findById(examenId)
                 .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
 
@@ -132,6 +130,132 @@ public class TentativeService {
         }
 
         return tentativeRepository.findByExamenId(examenId);
+    }
+
+    public List<Tentative> getTentativesACorriger(UUID examenId, UUID enseignantId) {
+        Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+        if (!examen.getCreateur().getId().equals(enseignantId)) {
+            throw new SecurityException("Seul le créateur de l'examen peut voir les tentatives à corriger");
+        }
+
+        List<Tentative> toutesTentatives = tentativeRepository.findByExamenId(examenId);
+
+        return toutesTentatives.stream()
+                .filter(tentative -> {
+                    if (tentative.getStatut() != StatutTentative.SOUMISE &&
+                            tentative.getStatut() != StatutTentative.EXPIREE) {
+                        return false;
+                    }
+
+                    if (tentative.isEstCorrigee()) {
+                        return false;
+                    }
+
+                    return tentative.getReponses().stream()
+                            .anyMatch(reponse -> {
+                                if (reponse.estQuestionDeveloppement() && !reponse.isEstCorrigee()) {
+                                    return true;
+                                }
+                                return false;
+                            });
+                })
+                .sorted(Comparator.comparing(Tentative::getDateSoumission))
+                .collect(Collectors.toList());
+    }
+
+    public Tentative getTentativePourCorrection(UUID tentativeId, UUID enseignantId) {
+        Tentative tentative = tentativeRepository.findById(tentativeId)
+                .orElseThrow(() -> new RuntimeException("Tentative non trouvée"));
+
+        Examen examen = tentative.getExamen();
+        if (!examen.getCreateur().getId().equals(enseignantId)) {
+            throw new SecurityException("Accès non autorisé à cette tentative");
+        }
+
+        if (tentative.getStatut() != StatutTentative.SOUMISE &&
+                tentative.getStatut() != StatutTentative.EXPIREE) {
+            throw new IllegalStateException("Cette tentative ne peut pas être corrigée");
+        }
+
+        return tentative;
+    }
+
+    public ReponseDonnee corrigerQuestionDeveloppement(UUID tentativeId, UUID reponseId,
+                                                       double note, String commentaire,
+                                                       UUID enseignantId) {
+        Tentative tentative = getTentativePourCorrection(tentativeId, enseignantId);
+
+        ReponseDonnee reponse = tentative.getReponses().stream()
+                .filter(r -> r.getId().equals(reponseId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Réponse non trouvée"));
+
+        if (!reponse.estQuestionDeveloppement()) {
+            throw new IllegalArgumentException("Seules les questions à développement peuvent être corrigées manuellement");
+        }
+
+        double bareme = reponse.getQuestion().getBareme();
+        if (note > bareme) {
+            throw new IllegalArgumentException(
+                    String.format("La note (%.1f) dépasse le barème de la question (%.1f)", note, bareme));
+        }
+
+        if (note < 0) {
+            throw new IllegalArgumentException("La note ne peut pas être négative");
+        }
+
+        reponse.noterPatiellement(note, commentaire, false);
+
+        tentative.recalculerScoreTotal();
+
+        // Si toutes les questions sont corrigées, marquer la tentative comme corrigée
+        boolean toutesCorrigees = tentative.getReponses().stream()
+                .allMatch(ReponseDonnee::isEstCorrigee);
+
+        if (toutesCorrigees) {
+            tentative.setCorrigee(true);
+        }
+
+        tentativeRepository.save(tentative);
+
+        return reponse;
+    }
+
+    public Tentative corrigerTentativeComplete(UUID tentativeId, Map<UUID, Double> notes,
+                                               Map<UUID, String> commentaires, UUID enseignantId) {
+        Tentative tentative = getTentativePourCorrection(tentativeId, enseignantId);
+
+        for (Map.Entry<UUID, Double> entry : notes.entrySet()) {
+            UUID reponseId = entry.getKey();
+            double note = entry.getValue();
+            String commentaire = commentaires.get(reponseId);
+
+            corrigerQuestionDeveloppement(tentativeId, reponseId, note, commentaire, enseignantId);
+        }
+
+        tentative.setCorrigee(true);
+
+        return tentativeRepository.save(tentative);
+    }
+
+    public ReponseDonnee annulerCorrectionReponse(UUID tentativeId, UUID reponseId, UUID enseignantId) {
+        Tentative tentative = getTentativePourCorrection(tentativeId, enseignantId);
+
+        ReponseDonnee reponse = tentative.getReponses().stream()
+                .filter(r -> r.getId().equals(reponseId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Réponse non trouvée"));
+
+        reponse.annulerCorrection();
+
+        tentative.recalculerScoreTotal();
+        tentative.setCorrigee(false);
+
+        tentativeRepository.save(tentative);
+
+        return reponse;
     }
 
 
@@ -151,8 +275,8 @@ public class TentativeService {
 
                 tentativeRepository.save(tentative);
 
-            } catch (Exception _) {
-
+            } catch (Exception e) {
+                return;
             }
         }
 
@@ -182,4 +306,6 @@ public class TentativeService {
             System.out.println("Nettoyage: " + tentativesExpirees.size() + " tentatives expirées soumises");
         }
     }
+
+
 }

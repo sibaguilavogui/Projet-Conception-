@@ -12,8 +12,11 @@ public class ReponsePossible {
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
-    private final String libelle;
+
+    private String libelle;
     private boolean correcte;
+
+    protected ReponsePossible() {}
 
     public ReponsePossible(String libelle, boolean correcte) {
         this.libelle = libelle;
@@ -30,5 +33,9 @@ public class ReponsePossible {
 
     public void marquerCorrecte() {
         this.correcte=true;
+    }
+
+    public void setLibelle(String libelle) {
+        this.libelle = libelle;
     }
 }

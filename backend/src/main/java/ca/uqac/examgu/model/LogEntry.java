@@ -13,19 +13,21 @@ public class LogEntry {
     private UUID id;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private TypeEvenement type;
 
+    @Column(name = "utilisateur", nullable = false)
     private String utilisateur;
     private String details;
-    private LocalDateTime timestamp;
+    @Column(nullable = false)
+    private LocalDateTime timestamp = LocalDateTime.now(); // Initialisez par défaut
 
     public LogEntry() {}
 
-    public LogEntry(TypeEvenement type, String utilisateur, String details, LocalDateTime timestamp) {
+    public LogEntry(TypeEvenement type, String utilisateur, String details) {
         this.type = type;
         this.utilisateur = utilisateur;
         this.details = details;
-        this.timestamp = timestamp;
     }
 
     public UUID getId() {

@@ -25,8 +25,7 @@ public class ExamenService {
     }
 
     public Examen creer(ExamenDTO ex, Enseignant createur) {
-        return repo.save(new Examen(ex.getTitre(), ex.getDescription(), ex.getDateDebut(), ex.getDateFin(),
-                ex.getDureeMinutes(), createur));
+        return repo.save(createur.creerExamen(ex));
     }
 
     public Examen modifierExamen(UUID examenId, ExamenDTO request, Enseignant enseignant) {
@@ -59,10 +58,6 @@ public class ExamenService {
 
         if (request.getDureeMinutes() != examen.getDureeMinutes()) {
             examen.setDureeMinutes(request.getDureeMinutes());
-        }
-
-        if (request.isNotationAutomatique() != examen.isNotationAutomatique()) {
-            examen.setNotationAutomatique(request.isNotationAutomatique());
         }
 
         return repo.save(examen);

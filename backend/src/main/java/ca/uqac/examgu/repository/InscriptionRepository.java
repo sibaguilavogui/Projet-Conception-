@@ -1,5 +1,6 @@
 package ca.uqac.examgu.repository;
 
+import ca.uqac.examgu.model.Examen;
 import ca.uqac.examgu.model.Inscription;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -12,4 +13,6 @@ public interface InscriptionRepository extends JpaRepository<Inscription, Long> 
     List<Inscription> findByExamenId(UUID examenId);
 
     Optional<Inscription> findByExamenIdAndEtudiantId(UUID examenId, UUID etudiantId);
+
+    void deleteByExamen(Examen examen);
 }

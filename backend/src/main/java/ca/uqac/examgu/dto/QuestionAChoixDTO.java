@@ -1,5 +1,6 @@
 package ca.uqac.examgu.dto;
 
+import ca.uqac.examgu.model.Enumerations.PolitiqueCorrectionQCM;
 import ca.uqac.examgu.model.QuestionAChoix;
 import ca.uqac.examgu.model.ReponsePossible;
 
@@ -15,13 +16,14 @@ public class QuestionAChoixDTO {
     private QuestionAChoix.TypeChoix typeChoix;
     private int nombreChoixMin;
     private int nombreChoixMax;
+    private PolitiqueCorrectionQCM politiqueCorrectionQCM;
 
     // Constructeurs
     public QuestionAChoixDTO() {}
 
     public QuestionAChoixDTO(UUID id, String enonce, double bareme, UUID examenId,
                              QuestionAChoix.TypeChoix typeChoix,
-                             int nombreChoixMin, int nombreChoixMax) {
+                             int nombreChoixMin, int nombreChoixMax, PolitiqueCorrectionQCM politiqueCorrectionQCM) {
         this.id = id;
         this.enonce = enonce;
         this.bareme = bareme;
@@ -29,6 +31,7 @@ public class QuestionAChoixDTO {
         this.typeChoix = typeChoix;
         this.nombreChoixMin = nombreChoixMin;
         this.nombreChoixMax = nombreChoixMax;
+        this.politiqueCorrectionQCM = politiqueCorrectionQCM;
     }
 
 
@@ -54,4 +57,11 @@ public class QuestionAChoixDTO {
     public int getNombreChoixMax() { return nombreChoixMax; }
     public void setNombreChoixMax(int nombreChoixMax) { this.nombreChoixMax = nombreChoixMax; }
 
+    public PolitiqueCorrectionQCM getPolitiqueCorrectionQCM() {
+        return politiqueCorrectionQCM;
+    }
+
+    public void setPolitiqueCorrectionQCM(PolitiqueCorrectionQCM politiqueCorrectionQCM) {
+        this.politiqueCorrectionQCM = politiqueCorrectionQCM;
+    }
 }

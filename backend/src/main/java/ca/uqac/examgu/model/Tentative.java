@@ -197,7 +197,7 @@ public class Tentative {
         noterManuellement(questionId, note, null);
     }
 
-    private void recalculerScoreTotal() {
+    public void recalculerScoreTotal() {
         this.score = reponses.stream()
                 .mapToDouble(ReponseDonnee::getNotePartielle)
                 .sum();

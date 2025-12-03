@@ -1,11 +1,10 @@
 package ca.uqac.examgu.model;
 
+import ca.uqac.examgu.model.Enumerations.PolitiqueCorrectionQCM;
 import jakarta.persistence.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "questions_choix")
@@ -14,12 +13,16 @@ public class QuestionAChoix extends Question {
 
     public enum TypeChoix {
         QCM,
-        VRAI_FAUX
+        UNIQUE
     }
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type_choix", nullable = false)
     private TypeChoix typeChoix;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "politique_correction_qcm", nullable = false)
+    private PolitiqueCorrectionQCM politiqueCorrectionQCM = PolitiqueCorrectionQCM.TOUT_OU_RIEN;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "question_choix_id")
@@ -36,38 +39,17 @@ public class QuestionAChoix extends Question {
     }
 
     public QuestionAChoix(String enonce, double bareme, TypeChoix typeChoix,
-                          int nombreChoixMin,
-                          int nombreChoixMax, Examen examen) {
+                          int nombreChoixMin, int nombreChoixMax,
+                          PolitiqueCorrectionQCM politiqueCorrectionQCM, Examen examen) {
         super(enonce, bareme, examen);
         this.typeChoix = typeChoix;
         this.nombreChoixMin = nombreChoixMin;
         this.nombreChoixMax = nombreChoixMax;
-    }
-
-    private void ajouterReponseVF() {
-        if (typeChoix != TypeChoix.VRAI_FAUX) {
-            throw new IllegalStateException("Cette méthode est réservée aux questions Vrai/Faux");
-        }
-
-        reponsesPossibles.clear();
-
-        ReponsePossible vrai = new ReponsePossible("Vrai", true);
-        ReponsePossible faux = new ReponsePossible("Faux", false);
-
-        reponsesPossibles.add(vrai);
-        reponsesPossibles.add(faux);
-
-        this.nombreChoixMin = 1;
-        this.nombreChoixMax = 1;
+        this.politiqueCorrectionQCM = politiqueCorrectionQCM;
     }
 
     public void ajouterReponsePossible(ReponsePossible reponse) {
         Objects.requireNonNull(reponse, "La réponse ne peut pas être null");
-
-        if (typeChoix == TypeChoix.VRAI_FAUX && reponsesPossibles.size() >= 2) {
-            throw new IllegalStateException("Une question Vrai/Faux ne peut avoir que deux réponses");
-        }
-
         reponsesPossibles.add(reponse);
     }
 
@@ -108,7 +90,7 @@ public class QuestionAChoix extends Question {
             return 0.0;
         }
 
-        if (typeChoix == TypeChoix.VRAI_FAUX || nombreChoixMax == 1) {
+        if (typeChoix == TypeChoix.UNIQUE) {
             return calculerNoteChoixUnique(reponseDonnee);
         } else {
             return calculerNoteQCM(reponseDonnee);
@@ -133,21 +115,69 @@ public class QuestionAChoix extends Question {
     }
 
     private double calculerNoteQCM(ReponseDonnee reponseDonnee) {
+        try {
+            String[] idsSelectionnes = reponseDonnee.getContenu().split(",");
+            Set<UUID> reponsesSelectionnees = Arrays.stream(idsSelectionnes)
+                    .map(UUID::fromString)
+                    .collect(Collectors.toSet());
 
+            long bonnesReponsesSelectionnees = reponsesPossibles.stream()
+                    .filter(r -> r.isCorrecte() && reponsesSelectionnees.contains(r.getId()))
+                    .count();
 
+            long mauvaisesReponsesSelectionnees = reponsesSelectionnees.size() - bonnesReponsesSelectionnees;
+            long totalBonnesReponses = getNombreReponsesCorrectes();
 
+            if (totalBonnesReponses == 0) {
+                return 0.0;
+            }
+
+            switch (politiqueCorrectionQCM) {
+                case TOUT_OU_RIEN:
+                    return calculerNoteToutOuRien(bonnesReponsesSelectionnees, mauvaisesReponsesSelectionnees,
+                            totalBonnesReponses);
+                case MOYENNE_BONS:
+                    return calculerNoteMoyenneBons(bonnesReponsesSelectionnees, totalBonnesReponses);
+                case ANNULATION:
+                    return calculerNoteAnnulation(bonnesReponsesSelectionnees, mauvaisesReponsesSelectionnees,
+                            totalBonnesReponses);
+                default:
+                    return 0.0;
+            }
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
+
+    private double calculerNoteToutOuRien(long bonnesSelectionnees, long mauvaisesSelectionnees,
+                                          long totalBonnes) {
+        if (bonnesSelectionnees == totalBonnes && mauvaisesSelectionnees == 0) {
+            return getBareme();
+        }
         return 0.0;
     }
 
-    public List<ReponsePossible> getReponsesPourAffichage() {
-        List<ReponsePossible> reponses = new ArrayList<>(reponsesPossibles);
-
-        return Collections.unmodifiableList(reponses);
+    private double calculerNoteMoyenneBons(long bonnesSelectionnees, long totalBonnes) {
+        double ratio = (double) bonnesSelectionnees / totalBonnes;
+        return ratio * getBareme();
     }
 
-    @Override
-    public boolean estValide() {
-        return getReponsesPossibles().size()>1 && !getEnonce().isEmpty() && getBareme()>=0;
+    private double calculerNoteAnnulation(long bonnesSelectionnees, long mauvaisesSelectionnees,
+                                          long totalBonnes) {
+        long scoreNet = bonnesSelectionnees - mauvaisesSelectionnees;
+        if (scoreNet < 0) {
+            scoreNet = 0;
+        }
+        double ratio = (double) scoreNet / totalBonnes;
+        return ratio * getBareme();
+    }
+
+    public PolitiqueCorrectionQCM getPolitiqueCorrectionQCM() {
+        return politiqueCorrectionQCM;
+    }
+
+    public void setPolitiqueCorrectionQCM(PolitiqueCorrectionQCM politiqueCorrectionQCM) {
+        this.politiqueCorrectionQCM = politiqueCorrectionQCM;
     }
 
     @Override
@@ -161,10 +191,6 @@ public class QuestionAChoix extends Question {
 
     public void setTypeChoix(TypeChoix typeChoix) {
         this.typeChoix = Objects.requireNonNull(typeChoix, "Le type de choix ne peut pas être null");
-
-        if (typeChoix == TypeChoix.VRAI_FAUX) {
-            ajouterReponseVF();
-        }
     }
 
     public List<ReponsePossible> getReponsesPossibles() {
@@ -194,8 +220,8 @@ public class QuestionAChoix extends Question {
     }
 
     public void setNombreChoixMax(int nombreChoixMax) {
-        if (nombreChoixMax < nombreChoixMin || nombreChoixMax > reponsesPossibles.size()) {
-            throw new IllegalArgumentException("Le nombre maximum de choix est invalide");
+        if (nombreChoixMax < nombreChoixMin) {
+            throw new IllegalArgumentException("Le nombre maximum de choix doit être >= au nombre minimum");
         }
         this.nombreChoixMax = nombreChoixMax;
     }

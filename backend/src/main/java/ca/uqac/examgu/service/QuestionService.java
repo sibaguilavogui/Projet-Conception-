@@ -22,7 +22,7 @@ public class QuestionService {
 
     public Examen ajouterQuestionChoix(QuestionAChoixDTO request, Examen examen) {
         examen.ajouterQuestionAChoix(request.getEnonce(), request.getBareme(),
-                request.getTypeChoix(), request.getNombreChoixMin(), request.getNombreChoixMax());
+                request.getTypeChoix(), request.getNombreChoixMin(), request.getNombreChoixMax(), request.getPolitiqueCorrectionQCM());
 
         return examenRepository.save(examen);
     }

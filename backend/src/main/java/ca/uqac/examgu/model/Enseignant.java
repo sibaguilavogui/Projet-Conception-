@@ -1,5 +1,6 @@
 package ca.uqac.examgu.model;
 
+import ca.uqac.examgu.dto.ExamenDTO;
 import ca.uqac.examgu.model.Enumerations.EtatExamen;
 import ca.uqac.examgu.model.Enumerations.Role;
 import jakarta.persistence.*;
@@ -23,10 +24,9 @@ public class Enseignant extends Utilisateur {
         super(email, motDePasse, Role.ENSEIGNANT, prenom, nom, departement, dateNaissance);
     }
 
-    public Examen creerExamen(String titre) {
-        Objects.requireNonNull(titre, "Le titre de l'examen ne peut pas être null");
-
-        return new Examen(titre, this);
+    public Examen creerExamen(ExamenDTO ex) {
+        return new Examen(ex.getTitre(), ex.getDescription(), ex.getDateDebut(), ex.getDateFin(),
+                ex.getDureeMinutes(), this);
     }
 
     public void planifierExamen(Examen examen, LocalDate dateDebut, LocalDate dateFin, int dureeMinutes) {

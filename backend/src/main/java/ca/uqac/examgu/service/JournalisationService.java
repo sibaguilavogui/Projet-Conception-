@@ -23,7 +23,7 @@ public class JournalisationService {
     public void log(TypeEvenement type, String utilisateur, String details) {
         logger.info("[{}] Utilisateur: {} → {}", type, utilisateur, details);
 
-        LogEntry logEntry = new LogEntry(type, utilisateur, details, LocalDateTime.now());
+        LogEntry logEntry = new LogEntry(type, utilisateur, details);
 
         logEntryRepository.save(logEntry);
     }

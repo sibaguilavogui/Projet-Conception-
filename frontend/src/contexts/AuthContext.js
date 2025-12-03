@@ -21,6 +21,10 @@ export const AuthProvider = ({ children }) => {
     
     if (token && userData) {
       try {
+        // Nettoyer le token s'il contient des guillemets
+        const cleanToken = token.replace(/^"(.*)"$/, '$1');
+        localStorage.setItem('token', cleanToken);
+        
         setUser(JSON.parse(userData));
       } catch (error) {
         console.error('Error parsing user data:', error);
@@ -32,7 +36,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData, token) => {
-    localStorage.setItem('token', token);
+    // Nettoyer le token avant stockage
+    const cleanToken = token.replace(/^"(.*)"$/, '$1');
+    localStorage.setItem('token', cleanToken);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
   };

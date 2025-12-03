@@ -10,12 +10,14 @@ const Dashboard = () => {
 
   const handleLogout = async () => {
     try {
+      const token = localStorage.getItem('token');
       await fetch('http://localhost:8080/auth/logout', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include'
       });
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);

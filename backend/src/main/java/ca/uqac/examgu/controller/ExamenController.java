@@ -12,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/examens")
@@ -31,6 +32,64 @@ public class ExamenController {
         this.etudiantService = etudiantService;
         this.tentativeService = tentativeService;
     }
+
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    @GetMapping("/{examenId}/tentatives-a-corriger")
+    public ResponseEntity<?> getTentativesACorriger(@PathVariable UUID examenId, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            Enseignant enseignant = enseignantService.findByEmail(email)
+                    .orElseThrow(() -> new SecurityException("Enseignant non trouvé"));
+
+            Examen examen = examenService.trouverParId(examenId)
+                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+            if (!examen.getCreateur().getId().equals(enseignant.getId())) {
+                return ResponseEntity.status(403).body("Seul le créateur de l'examen peut voir les tentatives à corriger");
+            }
+
+            List<Tentative> tentativesACorriger = tentativeService.getTentativesACorriger(examenId, enseignant.getId());
+
+            List<Map<String, Object>> response = tentativesACorriger.stream()
+                    .map(t -> {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("id", t.getId());
+                        map.put("etudiant", t.getEtudiant().getNom() + " " + t.getEtudiant().getPrenom());
+                        map.put("etudiantId", t.getEtudiant().getId());
+                        map.put("email", t.getEtudiant().getEmail());
+                        map.put("dateSoumission", t.getDateSoumission());
+                        map.put("statut", t.getStatut());
+                        map.put("scoreActuel", t.getScore());
+                        map.put("pourcentageCompletion", t.getPourcentageCompletion());
+                        map.put("estCorrigee", t.isEstCorrigee());
+                        map.put("nombreQuestionsRepondues", t.getNombreQuestionsRepondues());
+                        map.put("nombreQuestionsTotal", examen.getQuestions().size());
+
+                        long questionsDevNonCorrigees = t.getReponses().stream()
+                                .filter(r -> r.estQuestionDeveloppement() && !r.isEstCorrigee())
+                                .count();
+                        map.put("questionsDevNonCorrigees", questionsDevNonCorrigees);
+
+                        return map;
+                    })
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(response);
+
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Erreur serveur: " + e.getMessage());
+        }
+    }
+
+
+
+
+
+
 
     @PostMapping
     @PreAuthorize("hasRole('ENSEIGNANT')")
@@ -87,7 +146,10 @@ public class ExamenController {
                     return ResponseEntity.badRequest().body("L'énoncé est obligatoire");
                 }
                 if (request.getTypeChoix()==null) {
-                    return ResponseEntity.badRequest().body("Question Vrai/Faux ou QCM ?");
+                    return ResponseEntity.badRequest().body("Reponse unique ou multiple ?");
+                }
+                if (request.getPolitiqueCorrectionQCM()==null) {
+                    return ResponseEntity.badRequest().body("Choisissez une politique de correction");
                 }
 
                 return ResponseEntity.ok().body(

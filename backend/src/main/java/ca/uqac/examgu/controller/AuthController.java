@@ -43,12 +43,6 @@ public class AuthController {
                 Map<String, Object> response = new HashMap<>();
                 response.put("user", userInfo);
                 response.put("token", token.get("bearer"));
-
-                journalisationService.log(
-                        TypeEvenement.LOGIN,
-                        "ADMIN",
-                        "Connexion réussie"
-                );
                 return ResponseEntity.ok(response);
             }
         }

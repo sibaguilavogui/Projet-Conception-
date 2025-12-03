@@ -1,8 +1,12 @@
 package ca.uqac.examgu.model;
 
 import ca.uqac.examgu.model.Enumerations.EtatExamen;
+import ca.uqac.examgu.model.Enumerations.PolitiqueCorrectionQCM;
 import ca.uqac.examgu.model.Enumerations.StatutInscription;
 import jakarta.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -31,7 +35,7 @@ public class Examen {
     @Column(nullable = false)
     private EtatExamen etat = EtatExamen.BROUILLON;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "createur_id", nullable = false)
     private Enseignant createur;
 
@@ -48,8 +52,6 @@ public class Examen {
     private LocalDateTime dateCreation = LocalDateTime.now();
 
     private String description;
-
-    private boolean notationAutomatique = false;
 
     public Examen() {}
 
@@ -108,30 +110,156 @@ public class Examen {
         return etat == EtatExamen.OUVERT && estDisponible(now);
     }
 
-    public void ouvrir() {
+    public List<String> getValidationsPourEtatPret(){
+        List<String> erreurs = new ArrayList<>();
+
         if (this.etat != EtatExamen.BROUILLON) {
-            throw new IllegalStateException("Seuls les examens en brouillon peuvent être ouverts");
+            erreurs.add("Seuls les examens en brouillon peuvent être marqués comme PRÊT");
+            return erreurs;
         }
 
-        if (dateDebut == null || dateFin == null || dureeMinutes <= 0) {
-            throw new IllegalStateException("L'examen doit être planifié avant d'être ouvert");
+        if (titre == null || titre.trim().isEmpty()) {
+            erreurs.add("Le titre de l'examen est obligatoire");
         }
+
+        if (dateDebut == null) {
+            erreurs.add("La date de début n'est pas définie");
+        }
+
+        if (dateFin == null) {
+            erreurs.add("La date de fin n'est pas définie");
+        }
+
+        if (dureeMinutes <= 0) {
+            erreurs.add("La durée de l'examen doit être positive");
+        }
+
+        if (dateDebut != null && dateFin != null) {
+            if (dateFin.isBefore(dateDebut)) {
+                erreurs.add("La date de fin doit être après la date de début");
+            }
+
+            long fenetreMinutes = Duration.between(dateDebut, dateFin).toMinutes();
+            if (dureeMinutes > fenetreMinutes) {
+                erreurs.add(String.format(
+                        "La durée de l'examen (%d minutes) dépasse la fenêtre temporelle (%d minutes)",
+                        dureeMinutes, fenetreMinutes
+                ));
+            }
+
+            if (dateFin.isBefore(LocalDateTime.now())) {
+                erreurs.add("La date de fin de l'examen est déjà passée");
+            }
+        }
+
         if (questions.isEmpty()) {
-            throw new IllegalStateException("L'examen doit contenir au moins une question");
-        }
-        if (totalPoints() <= 0) {
-            throw new IllegalStateException("L'examen doit avoir un barème total positif");
+            erreurs.add("L'examen doit contenir au moins une question");
         }
 
-        this.etat = EtatExamen.OUVERT;
+        double total = totalPoints();
+        if (total <= 0) {
+            erreurs.add(String.format("Le barème total doit être positif (actuel: %.2f)", total));
+        }
+
+        for (int i = 0; i < questions.size(); i++) {
+            Question question = questions.get(i);
+
+            if (question.getEnonce() == null || question.getEnonce().trim().isEmpty()) {
+                erreurs.add(String.format("Question %d: L'énoncé est vide", i + 1));
+                continue;
+            }
+
+            if (question.getBareme() < 0) {
+                erreurs.add(String.format("Question %d: Le barème doit être positif (%.2f)", i + 1, question.getBareme()));
+            }
+
+            if (question instanceof QuestionAChoix) {
+                QuestionAChoix qChoix = (QuestionAChoix) question;
+                List<ReponsePossible> choix = qChoix.getReponsesPossibles();
+
+                if (choix == null || choix.size()<2) {
+                    erreurs.add(String.format("Question %d (choix): Aucun choix n'est défini", i + 1));
+                } else {
+                    long nbBonnesReponses = choix.stream()
+                            .filter(ReponsePossible::isCorrecte)
+                            .count();
+
+                    if (nbBonnesReponses == 0) {
+                        erreurs.add(String.format("Question %d (choix): Aucune réponse correcte n'est définie", i + 1));
+                    }
+
+                    if (qChoix.getTypeChoix() == QuestionAChoix.TypeChoix.UNIQUE && nbBonnesReponses != 1) {
+                        erreurs.add(String.format(
+                                "Question %d (choix unique): Doit avoir exactement une réponse correcte (actuel: %d)",
+                                i + 1, nbBonnesReponses
+                        ));
+                    }
+
+                    int nombreChoixDisponibles = choix.size();
+                    if (qChoix.getNombreChoixMax() > nombreChoixDisponibles) {
+                        erreurs.add(String.format(
+                                "Question %d: Le nombre maximum de choix (%d) est supérieur au nombre de choix disponibles (%d)",
+                                i + 1, qChoix.getNombreChoixMax(), nombreChoixDisponibles
+                        ));
+                    }
+
+                    if (qChoix.getNombreChoixMin() < 0) {
+                        erreurs.add(String.format("Question %d: Le nombre minimum de choix doit être positif ou nul", i + 1));
+                    }
+
+                    if (qChoix.getNombreChoixMax() < qChoix.getNombreChoixMin()) {
+                        erreurs.add(String.format(
+                                "Question %d: Le nombre maximum de choix (%d) doit être >= au nombre minimum (%d)",
+                                i + 1, qChoix.getNombreChoixMax(), qChoix.getNombreChoixMin()
+                        ));
+                    }
+                }
+
+                if (qChoix.getTypeChoix() == QuestionAChoix.TypeChoix.QCM) {
+                    if (qChoix.getPolitiqueCorrectionQCM() == null) {
+                        erreurs.add(String.format("Question %d (QCM): La politique de correction doit être définie", i + 1));
+                    }
+
+                    if (qChoix.getPolitiqueCorrectionQCM() == PolitiqueCorrectionQCM.ANNULATION) {
+                        long nbBonnesReponses = choix.stream()
+                                .filter(ReponsePossible::isCorrecte)
+                                .count();
+                        if (nbBonnesReponses < 2) {
+                            erreurs.add(String.format(
+                                    "Question %d (QCM avec politique ANNULATION): Doit avoir au moins 2 réponses correctes",
+                                    i + 1
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+
+        return erreurs;
+    }
+
+    public void mettreEnEtatPret() {
+        List<String> validations = getValidationsPourEtatPret();
+        if (!validations.isEmpty()) {
+            StringBuilder message = new StringBuilder("Impossible de marquer l'examen comme PRÊT:\n");
+            for (String validation : validations) {
+                message.append("• ").append(validation).append("\n");
+            }
+            throw new IllegalStateException(message.toString());
+        }
+
+        this.etat = EtatExamen.PRET;
+    }
+
+    public void ouvrir() {
+        if(getEtat()!=EtatExamen.PRET){
+            throw new IllegalStateException("L'examen n'est pas prêt à être ouvert");
+        }
+        setEtat(EtatExamen.OUVERT);
     }
 
     public void fermer() {
         this.etat = EtatExamen.FERME;
-
-        if (notationAutomatique) {
-            //corrigerAutomatiquement();
-        }
     }
 
     public void mettreEnBrouillon() {
@@ -142,10 +270,10 @@ public class Examen {
     }
 
     public QuestionAChoix ajouterQuestionAChoix(String enonce, double bareme, QuestionAChoix.TypeChoix typeChoix,
-                                int nombreChoixMin,
-                                int nombreChoixMax) {
+                                                int nombreChoixMin, int nombreChoixMax,
+                                                PolitiqueCorrectionQCM politiqueCorrection) {
         QuestionAChoix question = new QuestionAChoix(enonce, bareme, typeChoix,
-                nombreChoixMin, nombreChoixMax, this);
+                nombreChoixMin, nombreChoixMax, politiqueCorrection, this);
 
         if (etat != EtatExamen.BROUILLON) {
             throw new IllegalStateException("Impossible d'ajouter des questions à un examen non brouillon");
@@ -283,7 +411,7 @@ public class Examen {
     }
 
     public void setCreateur(Enseignant createur) {
-        this.createur = Objects.requireNonNull(createur, "Le créateur ne peut pas être null");
+        this.createur = createur;
     }
 
     public List<Question> getQuestions() {
@@ -334,14 +462,6 @@ public class Examen {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public boolean isNotationAutomatique() {
-        return notationAutomatique;
-    }
-
-    public void setNotationAutomatique(boolean notationAutomatique) {
-        this.notationAutomatique = notationAutomatique;
     }
 
     @Override
