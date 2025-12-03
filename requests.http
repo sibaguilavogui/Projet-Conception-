@@ -1,0 +1,23 @@
+### Création d’un étudiant de test
+POST http://localhost:8080/api/admin/utilisateurs
+Content-Type: application/json
+X-User-Id: admin@uqac.ca
+
+{
+  "email": "etu1@uqac.ca",
+  "motDePasse": "1234",
+  "prenom": "Etu",
+  "nom": "Test",
+  "departement": "INF",
+  "dateNaissance": "2002-01-01",
+  "role": "ETUDIANT"
+}
+
+### Inscrire l’étudiant à l’examen EX-0001
+POST http://localhost:8080/api/admin/examens/EX-0001/inscriptions
+Content-Type: application/json
+X-User-Id: admin@uqac.ca
+
+{
+  "etudiantRef": "ETU-0001"   // adapte avec le code renvoyé par la requête précédente
+}
