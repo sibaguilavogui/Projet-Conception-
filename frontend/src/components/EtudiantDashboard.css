@@ -1,0 +1,621 @@
+.etudiant-dashboard {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  overflow: hidden;
+  min-height: 80vh;
+}
+
+.dashboard-header {
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.dashboard-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.8rem;
+}
+
+.dashboard-tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  background-color: #f8f9fa;
+  padding: 0 1rem;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s;
+  font-size: 0.95rem;
+  color: #495057;
+}
+
+.tab:hover {
+  background-color: #e9ecef;
+}
+
+.tab.active {
+  background-color: white;
+  border-bottom-color: #17a2b8;
+  color: #17a2b8;
+  font-weight: bold;
+}
+
+.tab-content {
+  padding: 2rem;
+  min-height: 500px;
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+  font-size: 0.95rem;
+}
+
+.alert-success {
+  background-color: #d1e7dd;
+  color: #0f5132;
+  border: 1px solid #badbcc;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  color: #842029;
+  border: 1px solid #f5c2c7;
+  justify-content: space-between;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.icon {
+  font-size: 1em;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-info, .btn-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #138496;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #545b62;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-success:hover {
+  background-color: #1e7e34;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+.btn-info {
+  background-color: #4facfe;
+  color: white;
+}
+
+.btn-info:hover {
+  background-color: #3a9ef5;
+}
+
+.btn-warning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.btn-warning:hover {
+  background-color: #e0a800;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+/* Grille d'examens */
+.examens-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.examen-card {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.25rem;
+  transition: all 0.3s;
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.examen-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.examen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.examen-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  flex: 1;
+}
+
+.statut-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statut-brouillon {
+  background-color: #6c757d;
+  color: white;
+}
+
+.statut-pret {
+  background-color: #28a745;
+  color: white;
+}
+
+.statut-planifie {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.statut-termine {
+  background-color: #dc3545;
+  color: white;
+}
+
+.statut-en-cours {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.statut-inconnu {
+  background-color: #6c757d;
+  color: white;
+}
+
+.examen-description {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.examen-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.detail {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #495057;
+  font-size: 0.85rem;
+}
+
+.examen-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e9ecef;
+  margin-top: auto;
+}
+
+/* Résultats */
+.resultats-table {
+  overflow-x: auto;
+  margin-top: 1.5rem;
+}
+
+.resultats-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.resultats-table th,
+.resultats-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.resultats-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+}
+
+.resultats-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.examen-info {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+.score-display {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.score-value {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.score-max {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.note-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.note-badge.success {
+  background-color: #d1e7dd;
+  color: #0f5132;
+}
+
+.note-badge.warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.note-badge.danger {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* États vides */
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #6c757d;
+}
+
+.empty-state p {
+  margin: 1rem 0;
+  font-size: 1.1rem;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-tabs {
+    flex-direction: column;
+  }
+  
+  .tab {
+    justify-content: center;
+  }
+  
+  .examens-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .examen-header-bar {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .header-right {
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .composition-content {
+    flex-direction: column;
+  }
+  
+  .questions-navigation {
+    width: 100%;
+  }
+  
+  .questions-list {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  
+  .question-navigation {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .question-navigation button {
+    width: 100%;
+  }
+  
+  .resultats-table {
+    font-size: 0.9rem;
+  }
+  
+  .resultats-table th,
+  .resultats-table td {
+    padding: 0.75rem;
+  }
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.examen-etape {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.etape-header {
+  padding: 1rem 2rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: #17a2b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.btn-back:hover {
+  background: #e7f7f9;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #17a2b8;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #6c757d;
+}
+
+.empty-state .subtext {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #adb5bd;
+}
+
+.btn-refresh {
+  background: none;
+  border: none;
+  color: #17a2b8;
+  cursor: pointer;
+  font-size: 1.5rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.btn-refresh:hover {
+  background: #e7f7f9;
+}
+
+.btn-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary:disabled,
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.examen-card button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.examen-card button:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.statut-badge.statut-pret {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.statut-badge.statut-en-cours {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.statut-badge.statut-termine {
+  background-color: #dc3545;
+  color: white;
+}
+
+.statut-badge.statut-brouillon {
+  background-color: #6c757d;
+  color: white;
+}
+
+.note-badge.success {
+  background-color: #d1e7dd;
+  color: #0f5132;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.note-badge.warning {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.note-badge.danger {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.btn-info {
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-info:hover {
+  background-color: #138496;
+}

@@ -1,0 +1,154 @@
+import React, { useState, useEffect } from 'react';
+import './SoumissionConfirmee.css';
+
+const SoumissionConfirmee = ({ examen, tentative, onRetour }) => {
+  const [score, setScore] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (tentative && tentative.score !== undefined) {
+      setScore(tentative.score);
+      setLoading(false);
+    } else {
+      const timer = setTimeout(() => {
+        setScore(tentative?.score || 0);
+        setLoading(false);
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [tentative]);
+
+  const formaterDate = (dateString) => {
+    if (!dateString) return 'Non disponible';
+    return new Date(dateString).toLocaleString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  const calculerPourcentage = () => {
+    if (!score || !examen.totalPoints) return 0;
+    return (score / examen.totalPoints) * 100;
+  };
+
+  const getNoteBadgeClass = (pourcentage) => {
+    if (pourcentage >= 80) return 'note-excellente';
+    if (pourcentage >= 60) return 'note-bonne';
+    if (pourcentage >= 40) return 'note-moyenne';
+    return 'note-faible';
+  };
+
+  return (
+    <div className="soumission-confirmee">
+      <div className="confirmation-header">
+        <div className="checkmark">
+          <div className="checkmark-circle"></div>
+          <div className="checkmark-stem"></div>
+          <div className="checkmark-kick"></div>
+        </div>
+        <h2>Examen soumis avec succès!</h2>
+        <p>Votre tentative a été enregistrée et sera corrigée.</p>
+      </div>
+      
+      <div className="confirmation-content">
+        <div className="exam-summary">
+          <h3>Résumé de l'examen</h3>
+          <div className="summary-details">
+            <div className="summary-item">
+              <span className="summary-label">Examen:</span>
+              <span className="summary-value">{examen.titre}</span>
+            </div>
+            
+            <div className="summary-item">
+              <span className="summary-label">Date de soumission:</span>
+              <span className="summary-value">
+                {formaterDate(tentative?.dateSoumission)}
+              </span>
+            </div>
+            
+            <div className="summary-item">
+              <span className="summary-label">Statut:</span>
+              <span className="summary-value badge statut-termine">
+                {tentative?.estCorrigee ? 'Corrigé' : 'En attente de correction'}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        {loading ? (
+          <div className="score-loading">
+            <div className="spinner"></div>
+            <p>Calcul du score en cours...</p>
+          </div>
+        ) : (
+          <div className="score-section">
+            <h3>Résultats préliminaires</h3>
+            <div className="score-display">
+              <div className="score-numbers">
+                <span className="score-actuel">{score?.toFixed(1) || '0.0'}</span>
+                <span className="score-separator">/</span>
+                <span className="score-maximum">{examen.totalPoints || '?'}</span>
+              </div>
+              
+              <div className="score-percentage">
+                <div className={`percentage-badge ${getNoteBadgeClass(calculerPourcentage())}`}>
+                  {calculerPourcentage().toFixed(1)}%
+                </div>
+              </div>
+              
+              <div className="score-message">
+                {tentative?.estCorrigee ? (
+                  <p>Votre examen a été corrigé. Consultez les résultats dans la section "Mes résultats".</p>
+                ) : (
+                  <p>Les questions à développement seront corrigées manuellement par votre enseignant.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div className="next-steps">
+          <h4>Prochaines étapes:</h4>
+          <div className="steps-grid">
+            <div className="step">
+              <div className="step-icon">📝</div>
+              <div className="step-content">
+                <h5>Correction automatique</h5>
+                <p>Les questions QCM sont corrigées instantanément.</p>
+              </div>
+            </div>
+            
+            <div className="step">
+              <div className="step-icon">👨‍🏫</div>
+              <div className="step-content">
+                <h5>Correction manuelle</h5>
+                <p>Votre enseignant corrigera les questions à développement.</p>
+              </div>
+            </div>
+            
+            <div className="step">
+              <div className="step-icon">📊</div>
+              <div className="step-content">
+                <h5>Publication des notes</h5>
+                <p>Les résultats finaux seront disponibles lorsque la correction sera terminée.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="confirmation-actions">
+          <button className="btn btn-primary" onClick={onRetour}>
+            Retour au tableau de bord
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SoumissionConfirmee;
