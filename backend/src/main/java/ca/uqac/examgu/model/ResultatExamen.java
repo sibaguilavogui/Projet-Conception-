@@ -37,7 +37,6 @@ public class ResultatExamen {
         this.tentative = tentative;
         this.examen = tentative.getExamen();
         this.etudiant = tentative.getEtudiant();
-        this.score = tentative.getScore();
         this.scoreMax = tentative.getExamen().totalPoints();
         this.visible = tentative.getExamen().getPublication() != null &&
                 tentative.getExamen().getPublication().isEstPubliee();

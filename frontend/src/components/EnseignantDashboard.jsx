@@ -539,10 +539,19 @@ const EnseignantDashboard = () => {
   };
 
   const modifierOption = (index, champ, valeur) => {
-    const nouvellesOptions = [...nouvelleQuestion.options];
-    nouvellesOptions[index][champ] = valeur;
-    setNouvelleQuestion({ ...nouvelleQuestion, options: nouvellesOptions });
-  };
+  const nouvellesOptions = [...nouvelleQuestion.options];
+  
+  if (champ === 'estCorrecte' && valeur === true && nouvelleQuestion.typeChoix === 'UNIQUE') {
+    nouvellesOptions.forEach((option, i) => {
+      if (i !== index) {
+        option.estCorrecte = false;
+      }
+    });
+  }
+  
+  nouvellesOptions[index][champ] = valeur;
+  setNouvelleQuestion({ ...nouvelleQuestion, options: nouvellesOptions });
+};
 
   const supprimerOption = (index) => {
     if (nouvelleQuestion.options.length <= 2) {
@@ -1254,7 +1263,7 @@ const EnseignantDashboard = () => {
                         <div className="question-header">
                           <span className="question-number">Question {index + 1}</span>
                           <span className="question-type">
-                            {(question.typeQuestion === "QCM" || question.typeQuestion === "UNIQUE") ? 
+                            {(question.typeChoix === "QCM" || question.typeChoix === "UNIQUE") ? 
                             "Question à choix" : "Question à développement"}
                           </span>
                           <span className="question-points">{question.bareme} point(s)</span>

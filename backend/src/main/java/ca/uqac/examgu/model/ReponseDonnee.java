@@ -3,6 +3,7 @@ package ca.uqac.examgu.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -33,6 +34,9 @@ public class ReponseDonnee {
     @Column(name = "note_partielle")
     private double notePartielle = 0.0;
 
+    @Column(name = "commentaire")
+    private String commentaire;
+
     @Column(name = "est_corrigee")
     private boolean estCorrigee = false;
 
@@ -40,7 +44,8 @@ public class ReponseDonnee {
     private LocalDateTime dateCorrection;
 
     @Column(name = "auto_corrigee")
-    private boolean autoCorrigee = false;
+    private boolean autoCorrigee;
+
 
     public ReponseDonnee() {
     }
@@ -54,7 +59,7 @@ public class ReponseDonnee {
         this.contenu = contenu != null ? contenu : "";
         this.dateMaj = dateMaj != null ? dateMaj : LocalDateTime.now();
         this.notePartielle = 0.0;
-        this.estCorrigee = false;
+        this.autoCorrigee = false;
     }
 
     public void mettreAJourContenu(String contenu) {
@@ -72,14 +77,10 @@ public class ReponseDonnee {
     }
 
     public void noterPatiellement(double note) {
-        noterPatiellement(note, null, false);
+        noterPatiellement(note, null);
     }
 
     public void noterPatiellement(double note, String commentaire) {
-        noterPatiellement(note, commentaire, false);
-    }
-
-    public void noterPatiellement(double note, String commentaire, boolean autoCorrigee) {
 
         if (note < 0) {
             throw new IllegalArgumentException("La note ne peut pas être négative");
@@ -91,16 +92,16 @@ public class ReponseDonnee {
         }
 
         this.notePartielle = note;
+        this.commentaire = commentaire;
         this.estCorrigee = true;
-        this.autoCorrigee = autoCorrigee;
         this.dateCorrection = LocalDateTime.now();
     }
 
-    public void corrigerAutomatiquement() {
+    public void corrigerAutomatiquement() throws Exception {
         if (question instanceof QuestionAChoix) {
             QuestionAChoix questionChoix = (QuestionAChoix) question;
             double note = questionChoix.calculerNote(this);
-            noterPatiellement(note, "Correction automatique", true);
+            noterPatiellement(note, "Correction automatique");
         }
     }
 

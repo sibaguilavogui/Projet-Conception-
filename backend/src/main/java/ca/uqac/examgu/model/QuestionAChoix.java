@@ -85,7 +85,7 @@ public class QuestionAChoix extends Question {
                 .forEach(ReponsePossible::marquerCorrecte);
     }
 
-    public double calculerNote(ReponseDonnee reponseDonnee) {
+    public double calculerNote(ReponseDonnee reponseDonnee) throws Exception {
         if (reponseDonnee == null || reponseDonnee.getContenu() == null) {
             return 0.0;
         }
@@ -108,13 +108,14 @@ public class QuestionAChoix extends Question {
             if (reponseChoisie != null && reponseChoisie.isCorrecte()) {
                 return getBareme();
             }
+            return 0.0;
         } catch (IllegalArgumentException e) {
-           return 0;
+            throw new IllegalStateException("Erreur"+e.getMessage());
         }
-        return 0.0;
+
     }
 
-    private double calculerNoteQCM(ReponseDonnee reponseDonnee) {
+    private double calculerNoteQCM(ReponseDonnee reponseDonnee) throws Exception {
         try {
             String[] idsSelectionnes = reponseDonnee.getContenu().split(",");
             Set<UUID> reponsesSelectionnees = Arrays.stream(idsSelectionnes)
@@ -145,7 +146,7 @@ public class QuestionAChoix extends Question {
                     return 0.0;
             }
         } catch (Exception e) {
-            return 0.0;
+            throw new Exception(e.getMessage());
         }
     }
 
@@ -197,28 +198,6 @@ public class QuestionAChoix extends Question {
         if (reponsesPossibles != null) {
             this.reponsesPossibles.addAll(reponsesPossibles);
         }
-    }
-
-    public int getNombreChoixMin() {
-        return nombreChoixMin;
-    }
-
-    public void setNombreChoixMin(int nombreChoixMin) {
-        if (nombreChoixMin < 0 || nombreChoixMin > nombreChoixMax) {
-            throw new IllegalArgumentException("Le nombre minimum de choix est invalide");
-        }
-        this.nombreChoixMin = nombreChoixMin;
-    }
-
-    public int getNombreChoixMax() {
-        return nombreChoixMax;
-    }
-
-    public void setNombreChoixMax(int nombreChoixMax) {
-        if (nombreChoixMax < nombreChoixMin) {
-            throw new IllegalArgumentException("Le nombre maximum de choix doit être >= au nombre minimum");
-        }
-        this.nombreChoixMax = nombreChoixMax;
     }
 
     public int getNombreReponsesCorrectes() {

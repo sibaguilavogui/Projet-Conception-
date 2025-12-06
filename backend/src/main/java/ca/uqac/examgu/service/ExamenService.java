@@ -3,8 +3,9 @@ package ca.uqac.examgu.service;
 import ca.uqac.examgu.dto.ExamenDTO;
 import ca.uqac.examgu.model.*;
 import ca.uqac.examgu.model.Enumerations.EtatExamen;
-import ca.uqac.examgu.model.Enumerations.TypeEvenement;
+import ca.uqac.examgu.model.Enumerations.StatutTentative;
 import ca.uqac.examgu.repository.ExamenRepository;
+import ca.uqac.examgu.repository.TentativeRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -20,10 +22,12 @@ public class ExamenService {
 
     private final ExamenRepository examenRepository;
     private final JournalisationService journalisationService;
+    private final TentativeRepository tentativeRepository;
 
-    public ExamenService(ExamenRepository repo, ExamenRepository examenRepository, JournalisationService journalisationService) {
+    public ExamenService(ExamenRepository repo, ExamenRepository examenRepository, JournalisationService journalisationService, TentativeRepository tentativeRepository) {
         this.examenRepository = examenRepository;
         this.journalisationService = journalisationService;
+        this.tentativeRepository = tentativeRepository;
     }
 
     public Examen creer(ExamenDTO ex, Enseignant createur) {
@@ -143,6 +147,115 @@ public class ExamenService {
 
     public List<Examen> listerExamenEtudiant(Etudiant etudiant){return examenRepository.findAll()
             .stream().filter(examen -> examen.estInscrit(etudiant)).toList();}
+
+    public double getNoteEtudiant(UUID examenId, UUID etudiantId){
+        Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+        if(examen.isNotesVisibles()){
+            Tentative tentative = tentativeRepository
+                    .findByExamenIdAndEtudiantId(examenId, etudiantId)
+                    .orElseThrow(()-> new RuntimeException("Tentative non trouvée"));
+            if (!tentative.getEtudiant().getId().equals(etudiantId)) {
+                throw new SecurityException("Accès non autorisé à cette tentative");
+            }
+            return tentative.getNoteFinale();
+        }
+        return -1;
+    }
+
+    public Examen publierNotes(UUID examenId){
+        Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+        examen.publierNotes();
+        return examenRepository.save(examen);
+    }
+
+    public Examen masquerNotes(UUID examenId){
+        Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+        examen.masquerNotes();
+        return examenRepository.save(examen);
+    }
+
+    public Map<String, Object> calculerNotesFinalesExamen(UUID examenId) {
+        Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+        List<Tentative> toutesTentatives = tentativeRepository.findByExamenId(examenId)
+                .stream()
+                .filter(t -> t.getStatut() == StatutTentative.SOUMISE)
+                .collect(Collectors.toList());
+
+        Map<String, Object> resultat = new HashMap<>();
+        List<Map<String, Object>> tentativesTraitees = new ArrayList<>();
+        List<Map<String, Object>> tentativesAvecProblemes = new ArrayList<>();
+        boolean toutesCorrigees = true;
+
+        for (Tentative tentative : toutesTentatives) {
+            Map<String, Object> infoTentative = new HashMap<>();
+            infoTentative.put("tentativeId", tentative.getId());
+            infoTentative.put("etudiant", tentative.getEtudiant().getNom() + " " + tentative.getEtudiant().getPrenom());
+
+            // Vérifier les questions à développement non corrigées
+            List<Question> questionsDevNonCorrigees = tentative.getReponses().stream()
+                    .filter(r -> r.getQuestion() instanceof QuestionADeveloppement && !r.isEstCorrigee())
+                    .map(ReponseDonnee::getQuestion)
+                    .collect(Collectors.toList());
+
+            if (!questionsDevNonCorrigees.isEmpty()) {
+                toutesCorrigees = false;
+                infoTentative.put("statut", "ERREUR");
+                infoTentative.put("message", "Questions à développement non corrigées");
+                infoTentative.put("questionsNonCorrigees", questionsDevNonCorrigees.stream()
+                        .map(q -> Map.of(
+                                "id", q.getId(),
+                                "enonce", q.getEnonce().substring(0, Math.min(50, q.getEnonce().length())) + "..."
+                        ))
+                        .collect(Collectors.toList()));
+                tentativesAvecProblemes.add(infoTentative);
+                continue;
+            }
+
+            // Corriger automatiquement les QCM
+            int qcmCorriges = 0;
+            for (ReponseDonnee reponse : tentative.getReponses()) {
+                if (reponse.getQuestion() instanceof QuestionAChoix && !reponse.isEstCorrigee()) {
+                    try {
+                        reponse.corrigerAutomatiquement();
+                        qcmCorriges++;
+                    } catch (Exception e) {
+                        // Ignorer les erreurs pour cette correction
+                    }
+                }
+            }
+
+            // Calculer la note finale
+            tentative.calculerNoteFinale();
+            tentativeRepository.save(tentative);
+
+            infoTentative.put("statut", "SUCCES");
+            infoTentative.put("qcmCorriges", qcmCorriges);
+            infoTentative.put("noteFinale", tentative.getNoteFinale());
+            tentativesTraitees.add(infoTentative);
+        }
+
+        resultat.put("examenId", examenId);
+        resultat.put("titreExamen", examen.getTitre());
+        resultat.put("tentativesTraitees", tentativesTraitees);
+        resultat.put("tentativesAvecProblemes", tentativesAvecProblemes);
+        resultat.put("toutesCorrigees", toutesCorrigees);
+
+        if (toutesCorrigees) {
+            resultat.put("message", "Toutes les notes ont été calculées avec succès");
+            // Marquer l'examen comme corrigé si vous avez cet attribut
+            // examen.setCorrige(true);
+            // examenRepository.save(examen);
+        } else {
+            resultat.put("message", "Certaines tentatives n'ont pas pu être entièrement corrigées");
+        }
+
+        return resultat;
+    }
 
     @Scheduled(fixedRate = 60000) // Vérifie toutes les minutes
     public void ouvrirExamensAutomatiquement() {

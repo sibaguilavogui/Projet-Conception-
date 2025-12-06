@@ -50,6 +50,9 @@ public class Examen {
     @OneToOne(mappedBy = "examen", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private NotePublication publication;
 
+    @Column(name = "est_corrige")
+    private boolean estCorrige = false;
+
     @Column(name = "notes_visibles")
     private boolean notesVisibles = false;
 
@@ -204,24 +207,6 @@ public class Examen {
                         ));
                     }
 
-                    int nombreChoixDisponibles = choix.size();
-                    if (qChoix.getNombreChoixMax() > nombreChoixDisponibles) {
-                        erreurs.add(String.format(
-                                "Question %d: Le nombre maximum de choix (%d) est supérieur au nombre de choix disponibles (%d)",
-                                i + 1, qChoix.getNombreChoixMax(), nombreChoixDisponibles
-                        ));
-                    }
-
-                    if (qChoix.getNombreChoixMin() < 0) {
-                        erreurs.add(String.format("Question %d: Le nombre minimum de choix doit être positif ou nul", i + 1));
-                    }
-
-                    if (qChoix.getNombreChoixMax() < qChoix.getNombreChoixMin()) {
-                        erreurs.add(String.format(
-                                "Question %d: Le nombre maximum de choix (%d) doit être >= au nombre minimum (%d)",
-                                i + 1, qChoix.getNombreChoixMax(), qChoix.getNombreChoixMin()
-                        ));
-                    }
                 }
 
                 if (qChoix.getTypeChoix() == QuestionAChoix.TypeChoix.QCM) {
@@ -372,7 +357,18 @@ public class Examen {
         return Duration.between(maintenant, dateFin).toMinutes();
     }
 
+    public boolean isEstCorrige() {
+        return estCorrige;
+    }
+
+    public void setEstCorrige(boolean estCorrige) {
+        this.estCorrige = estCorrige;
+    }
+
     public void publierNotes() {
+        if(!isEstCorrige()){
+            throw new RuntimeException("Toute les tentatives ne sont pas corrigées");
+        }
         this.notesVisibles = true;
         this.datePublicationNotes = LocalDateTime.now();
     }

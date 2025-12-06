@@ -40,55 +40,46 @@ public class ExamenController {
         this.tentativeRepository = tentativeRepository;
     }
 
+    @GetMapping("/examens/{examenId}/tentatives-a-corriger")
     @PreAuthorize("hasRole('ENSEIGNANT')")
-    @GetMapping("/{examenId}/tentatives-a-corriger")
-    public ResponseEntity<?> getTentativesACorriger(@PathVariable UUID examenId, Authentication authentication) {
+    public ResponseEntity<?> getTentativesACorriger(@PathVariable UUID examenId, Authentication auth) {
         try {
-            String email = authentication.getName();
-            Enseignant enseignant = enseignantService.findByEmail(email)
-                    .orElseThrow(() -> new SecurityException("Enseignant non trouvé"));
-
+            UUID enseignantId = getEnseignantCourantId(auth);
             Examen examen = examenService.trouverParId(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
 
-            if (!examen.getCreateur().getId().equals(enseignant.getId())) {
-                return ResponseEntity.status(403).body("Seul le créateur de l'examen peut voir les tentatives à corriger");
+            // Vérifier que l'enseignant est le créateur
+            if (!examen.getCreateur().getId().equals(enseignantId)) {
+                return ResponseEntity.status(403).body("Accès refusé");
             }
 
-            List<Tentative> tentativesACorriger = tentativeService.getTentativesACorriger(examenId, enseignant.getId());
+            List<Tentative> tentatives = tentativeService.getTentativesExamen(examenId, enseignantId);
 
-            List<Map<String, Object>> response = tentativesACorriger.stream()
-                    .map(t -> {
-                        Map<String, Object> map = new HashMap<>();
-                        map.put("id", t.getId());
-                        map.put("etudiant", t.getEtudiant().getNom() + " " + t.getEtudiant().getPrenom());
-                        map.put("etudiantId", t.getEtudiant().getId());
-                        map.put("email", t.getEtudiant().getEmail());
-                        map.put("dateSoumission", t.getDateSoumission());
-                        map.put("statut", t.getStatut());
-                        map.put("scoreActuel", t.getScore());
-                        map.put("pourcentageCompletion", t.getPourcentageCompletion());
-                        map.put("estCorrigee", t.estCorrigee());
-                        map.put("nombreQuestionsRepondues", t.getNombreQuestionsRepondues());
-                        map.put("nombreQuestionsTotal", examen.getQuestions().size());
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Tentative t : tentatives) {
+                if (t.getStatut() == ca.uqac.examgu.model.Enumerations.StatutTentative.SOUMISE) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", t.getId());
+                    map.put("etudiantNom", t.getEtudiant().getNom() + " " + t.getEtudiant().getPrenom());
+                    map.put("etudiantEmail", t.getEtudiant().getEmail());
+                    map.put("dateSoumission", t.getDateSoumission());
+                    map.put("noteFinale", t.getNoteFinale());
+                    map.put("estNoteFinaleCalculee", t.isEstNoteFinaleCalculee());
 
-                        long questionsDevNonCorrigees = t.getReponses().stream()
-                                .filter(r -> r.estQuestionDeveloppement() && !r.isEstCorrigee())
-                                .count();
-                        map.put("questionsDevNonCorrigees", questionsDevNonCorrigees);
+                    // Compter les questions à développement non corrigées
+                    long questionsDevNonCorrigees = t.getReponses().stream()
+                            .filter(r -> r.estQuestionDeveloppement() && !r.isEstCorrigee())
+                            .count();
+                    map.put("questionsDevNonCorrigees", questionsDevNonCorrigees);
 
-                        return map;
-                    })
-                    .collect(Collectors.toList());
+                    result.add(map);
+                }
+            }
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(result);
 
-        } catch (SecurityException e) {
-            return ResponseEntity.status(403).body(e.getMessage());
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Erreur serveur: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
         }
     }
 
@@ -596,6 +587,110 @@ public class ExamenController {
     }
 
 
+    @PostMapping("/{examenId}/calculer-notes-finales")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> calculerNotesFinales(@PathVariable UUID examenId, Authentication auth) {
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+            Examen examen = examenService.trouverParId(examenId)
+                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+            // Vérifier que l'enseignant est le créateur
+            if (!examen.getCreateur().getId().equals(enseignantId)) {
+                return ResponseEntity.status(403).body("Accès refusé");
+            }
+
+            examenService.calculerNotesFinalesExamen(examenId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Notes finales calculées avec succès");
+            response.put("examenId", examenId);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{examenId}/publier-notes")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> publierNotes(@PathVariable UUID examenId, Authentication auth) {
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+            Examen examen = examenService.trouverParId(examenId)
+                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+            // Vérifier que l'enseignant est le créateur
+            if (!examen.getCreateur().getId().equals(enseignantId)) {
+                return ResponseEntity.status(403).body("Accès refusé");
+            }
+
+            Examen examenMisAJour = examenService.publierNotes(examenId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Notes publiées avec succès");
+            response.put("notesVisibles", examenMisAJour.isNotesVisibles());
+            response.put("datePublication", examenMisAJour.getDatePublicationNotes());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{examenId}/masquer-notes")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> masquerNotes(@PathVariable UUID examenId, Authentication auth) {
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+            Examen examen = examenService.trouverParId(examenId)
+                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+            // Vérifier que l'enseignant est le créateur
+            if (!examen.getCreateur().getId().equals(enseignantId)) {
+                return ResponseEntity.status(403).body("Accès refusé");
+            }
+
+            Examen examenMisAJour = examenService.masquerNotes(examenId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Notes masquées avec succès");
+            response.put("notesVisibles", examenMisAJour.isNotesVisibles());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{examenId}/ma-note")
+    @PreAuthorize("hasRole('ETUDIANT')")
+    public ResponseEntity<?> getMaNote(@PathVariable UUID examenId, Authentication auth) {
+        try {
+            UUID etudiantId = getEtudiantCourantId(auth);
+
+            Double note = examenService.getNoteEtudiant(examenId, etudiantId);
+            if(note<0){
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Les notes ne sont pas encore disponibles ou non publiées");
+            }
+            Map<String, Object> response = new HashMap<>();
+            response.put("note", note);
+            response.put("examenId", examenId);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        }
+    }
+
+
+
+
     @GetMapping("/{examenId}/questions")
     public ResponseEntity<?> getQuestionsExamen(@PathVariable UUID examenId, Authentication authentication) {
         try {
@@ -668,8 +763,6 @@ public class ExamenController {
                         QuestionAChoix qChoix = (QuestionAChoix) question;
                         questionMap.put("type", "CHOIX");
                         questionMap.put("typeChoix", qChoix.getTypeChoix());
-                        questionMap.put("nombreChoixMin", qChoix.getNombreChoixMin());
-                        questionMap.put("nombreChoixMax", qChoix.getNombreChoixMax());
                         questionMap.put("politiqueCorrectionQCM", qChoix.getPolitiqueCorrectionQCM());
 
                         // Ajouter les réponses possibles avec l'information de correction
@@ -706,8 +799,6 @@ public class ExamenController {
                         QuestionAChoix qChoix = (QuestionAChoix) question;
                         questionMap.put("type", "CHOIX");
                         questionMap.put("typeChoix", qChoix.getTypeChoix());
-                        questionMap.put("nombreChoixMin", qChoix.getNombreChoixMin());
-                        questionMap.put("nombreChoixMax", qChoix.getNombreChoixMax());
                         questionMap.put("politiqueCorrectionQCM", qChoix.getPolitiqueCorrectionQCM());
 
                         // Pour les étudiants, ne pas inclure l'information de correction

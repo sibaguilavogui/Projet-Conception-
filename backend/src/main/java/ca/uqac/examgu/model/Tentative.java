@@ -27,9 +27,6 @@ public class Tentative {
     @Column(nullable = false)
     private StatutTentative statut;
 
-    @Column(nullable = false)
-    private double score;
-
     @Column(name = "note_finale")
     private double noteFinale = 0.0;
 
@@ -38,7 +35,6 @@ public class Tentative {
 
     @Column(name = "date_calcul_note")
     private LocalDateTime dateCalculNote;
-
 
 
     @Column(name = "est_corrigee")
@@ -70,7 +66,6 @@ public class Tentative {
     public Tentative() {
         this.dateCreation = LocalDateTime.now();
         this.statut = StatutTentative.EN_COURS;
-        this.score = 0.0;
     }
 
     public Tentative(Examen examen, Etudiant etudiant) {
@@ -78,15 +73,13 @@ public class Tentative {
         this.examen = Objects.requireNonNull(examen, "L'examen ne peut pas être null");
         this.etudiant = Objects.requireNonNull(etudiant, "L'étudiant ne peut pas être null");
         this.debut = LocalDateTime.now();
-        this.fin = calculerDateFin();
+        this.fin = calculerDeadline();
     }
 
-    // Méthodes métier principales
     public void demarrer() {
         LocalDateTime now = LocalDateTime.now();
-
         this.debut = now;
-        this.fin = calculerDateFin();
+        this.fin = calculerDeadline();
         this.statut = StatutTentative.EN_COURS;
         this.dateModification = now;
     }
@@ -116,7 +109,7 @@ public class Tentative {
         this.dateModification = now;
     }
 
-    public void soumettre() {
+    public void soumettre() throws Exception {
         LocalDateTime now = LocalDateTime.now();
 
         if (statut != StatutTentative.EN_COURS) {
@@ -131,7 +124,6 @@ public class Tentative {
         corrigerAutomatiquement();
 
         // Recalculer le score total
-        recalculerScoreTotal();
         this.dateModification = now;
     }
 
@@ -161,7 +153,7 @@ public class Tentative {
         return false;
     }
 
-    private void corrigerAutomatiquement() {
+    private void corrigerAutomatiquement() throws Exception {
         for (ReponseDonnee reponse : reponses) {
             if (reponse.getQuestion() instanceof QuestionAChoix && !reponse.isEstCorrigee()) {
                 reponse.corrigerAutomatiquement();
@@ -190,19 +182,12 @@ public class Tentative {
             reponses.add(reponse);
         }
 
-        reponse.noterPatiellement(note, commentaire, false);
-        recalculerScoreTotal();
+        reponse.noterPatiellement(note, commentaire);
         this.dateModification = LocalDateTime.now();
     }
 
     public void appliquerNoteManuelle(UUID questionId, double note) {
         noterManuellement(questionId, note, null);
-    }
-
-    public void recalculerScoreTotal() {
-        this.score = reponses.stream()
-                .mapToDouble(ReponseDonnee::getNotePartielle)
-                .sum();
     }
 
     public double calculerScoreAuto() {
@@ -211,7 +196,11 @@ public class Tentative {
                 .mapToDouble(r -> {
                     if (r.getQuestion() instanceof QuestionAChoix) {
                         QuestionAChoix question = (QuestionAChoix) r.getQuestion();
-                        return question.calculerNote(r);
+                        try {
+                            return question.calculerNote(r);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
                     }
                     return 0.0;
                 })
@@ -243,27 +232,16 @@ public class Tentative {
         return deadlineParDuree.isBefore(finExamen) ? deadlineParDuree : finExamen;
     }
 
-    private LocalDateTime calculerDateFin() {
-        if (debut == null) {
-            return null;
-        }
-        return debut.plusMinutes(Math.max(0, examen.getDureeMinutes()));
-    }
-
     private boolean peutModifier() {
         // Une tentative ne peut être modifiée que si elle est en cours ET non expirée
         return statut == StatutTentative.EN_COURS && !estExpiree();
     }
 
-    private ReponseDonnee trouverReponse(UUID questionId) {
+    public ReponseDonnee trouverReponse(UUID questionId) {
         return reponses.stream()
                 .filter(r -> r.getQuestion() != null && questionId.equals(r.getQuestion().getId()))
                 .findFirst()
                 .orElse(null);
-    }
-
-    public ReponseDonnee getReponsePourQuestion(UUID questionId) {
-        return trouverReponse(questionId);
     }
 
     public boolean estCompletee() {
@@ -295,18 +273,6 @@ public class Tentative {
 
     public void mettreAJourDateModification() {
         this.dateModification = LocalDateTime.now();
-    }
-
-    public Map<String, Object> getResumeProgression() {
-        Map<String, Object> resume = new HashMap<>();
-        resume.put("id", id);
-        resume.put("nombreQuestions", examen.getQuestions().size());
-        resume.put("nombreReponses", getNombreReponses());
-        resume.put("pourcentageCompletion", getPourcentageCompletion());
-        resume.put("tempsRestant", tempsRestant());
-        resume.put("statut", statut);
-        resume.put("score", score);
-        return resume;
     }
 
     // Getters et Setters
@@ -345,16 +311,7 @@ public class Tentative {
         this.dateModification = LocalDateTime.now();
     }
 
-    public double getScore() {
-        return score;
-    }
-
-    public void setScore(double score) {
-        this.score = score;
-        this.dateModification = LocalDateTime.now();
-    }
-
-    public boolean estCorrigee() {
+    public boolean isEstCorrigee() {
         return estCorrigee;
     }
 
@@ -468,7 +425,6 @@ public class Tentative {
         infos.put("statut", statut);
         infos.put("estExpiree", estExpiree());
         infos.put("tempsRestant", tempsRestant());
-        infos.put("score", score);
         infos.put("estCorrigee", estCorrigee);
         infos.put("dateSoumission", dateSoumission);
 
@@ -528,7 +484,6 @@ public class Tentative {
                 id,
                 etudiant != null ? etudiant.getEmail() : "null",
                 examen != null ? examen.getTitre() : "null",
-                statut,
-                score);
+                statut);
     }
 }

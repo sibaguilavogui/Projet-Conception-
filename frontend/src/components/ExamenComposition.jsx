@@ -180,7 +180,7 @@ const ExamenComposition = ({ examen, tentativeId, onSoumettre, onQuitter }) => {
       if (updateTempsRestantRef.current) {
         updateTempsRestantRef.current();
       }
-    }, 5000);
+    }, 1000);
     
     const saveId = setInterval(() => {
       Object.entries(reponses).forEach(([questionId, contenu]) => {
@@ -432,19 +432,24 @@ const QuestionChoix = ({ question, reponse, onReponseChange }) => {
     let nouvelleReponse;
     
     if (question.typeChoix === 'MULTIPLE' || question.typeChoix === 'QCM') {
-      // Pour les questions à choix multiples
-      const reponsesActuelles = reponse ? reponse.split(',').filter(id => id) : [];
+      const reponsesActuelles = reponse ? reponse.split(',').filter(id => id && id.trim() !== '') : [];
       
-      if (reponsesActuelles.includes(choixId)) {
-        nouvelleReponse = reponsesActuelles.filter(id => id !== choixId).join(',');
+      const index = reponsesActuelles.indexOf(choixId);
+      
+      if (index !== -1) {
+        reponsesActuelles.splice(index, 1);
+        nouvelleReponse = reponsesActuelles.join(',');
       } else {
-        if (reponsesActuelles.length < question.nombreChoixMax) {
+        const maxChoix = question.nombreChoixMax || reponsesActuelles.length + 1;
+        
+        if (reponsesActuelles.length < maxChoix) {
           reponsesActuelles.push(choixId);
           nouvelleReponse = reponsesActuelles.join(',');
+        } else {
+          return;
         }
       }
     } else {
-      // Pour les questions à choix unique
       nouvelleReponse = choixId;
     }
     

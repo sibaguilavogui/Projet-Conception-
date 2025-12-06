@@ -94,7 +94,7 @@ public class TentativeService {
         return tentativeRepository.save(tentative);
     }
 
-    public Tentative soumettreTentative(UUID tentativeId, UUID etudiantId) {
+    public Tentative soumettreTentative(UUID tentativeId, UUID etudiantId) throws Exception {
         Tentative tentative = tentativeRepository.findById(tentativeId)
                 .orElseThrow(() -> new RuntimeException("Tentative non trouvée"));
 
@@ -107,7 +107,8 @@ public class TentativeService {
         return tentativeRepository.save(tentative);
     }
 
-    public Tentative reprendreTentative(UUID tentativeId, UUID etudiantId) {
+
+    public Tentative reprendreTentative(UUID tentativeId, UUID etudiantId) throws Exception {
         Tentative tentative = tentativeRepository.findById(tentativeId)
                 .orElseThrow(() -> new RuntimeException("Tentative non trouvée"));
 
@@ -164,7 +165,7 @@ public class TentativeService {
                         return false;
                     }
 
-                    if (tentative.estCorrigee()) {
+                    if (tentative.isEstCorrigee()) {
                         return false;
                     }
 
@@ -196,7 +197,30 @@ public class TentativeService {
         return tentative;
     }
 
-    public ReponseDonnee corrigerQuestionDeveloppement(UUID tentativeId, UUID reponseId,
+
+    public List<ReponseDonnee> getReponsesDevTentative(UUID tentativeId, UUID enseignantId) {
+        Tentative tentative = tentativeRepository.findById(tentativeId)
+                .orElseThrow(() -> new RuntimeException("Tentative non trouvée"));
+
+        Examen examen = tentative.getExamen();
+        if (!examen.getCreateur().getId().equals(enseignantId)) {
+            throw new SecurityException("Accès non autorisé à cette tentative");
+        }
+
+        if (tentative.getStatut() != StatutTentative.SOUMISE) {
+            throw new IllegalStateException("Cette tentative ne peut pas être corrigée");
+        }
+
+        // Filtrer les réponses pour ne garder que les questions à développement
+        List<ReponseDonnee> reponsesDevOnly = tentative.getReponses().stream()
+                .filter(reponse -> reponse.estQuestionDeveloppement())
+                .collect(Collectors.toList());
+
+        return reponsesDevOnly;
+    }
+
+
+    public Tentative corrigerQuestionDeveloppement(UUID tentativeId, UUID reponseId,
                                                        double note, String commentaire,
                                                        UUID enseignantId) {
         Tentative tentative = getTentativePourCorrection(tentativeId, enseignantId);
@@ -210,19 +234,7 @@ public class TentativeService {
             throw new IllegalArgumentException("Seules les questions à développement peuvent être corrigées manuellement");
         }
 
-        double bareme = reponse.getQuestion().getBareme();
-        if (note > bareme) {
-            throw new IllegalArgumentException(
-                    String.format("La note (%.1f) dépasse le barème de la question (%.1f)", note, bareme));
-        }
-
-        if (note < 0) {
-            throw new IllegalArgumentException("La note ne peut pas être négative");
-        }
-
-        reponse.noterPatiellement(note, commentaire, false);
-
-        tentative.recalculerScoreTotal();
+        reponse.noterPatiellement(note, commentaire);
 
         // Si toutes les questions sont corrigées, marquer la tentative comme corrigée
         boolean toutesCorrigees = tentative.getReponses().stream()
@@ -232,9 +244,7 @@ public class TentativeService {
             tentative.setCorrigee(true);
         }
 
-        tentativeRepository.save(tentative);
-
-        return reponse;
+        return tentativeRepository.save(tentative);
     }
 
     public Tentative corrigerTentativeComplete(UUID tentativeId, Map<UUID, Double> notes,
@@ -252,24 +262,6 @@ public class TentativeService {
         tentative.setCorrigee(true);
 
         return tentativeRepository.save(tentative);
-    }
-
-    public ReponseDonnee annulerCorrectionReponse(UUID tentativeId, UUID reponseId, UUID enseignantId) {
-        Tentative tentative = getTentativePourCorrection(tentativeId, enseignantId);
-
-        ReponseDonnee reponse = tentative.getReponses().stream()
-                .filter(r -> r.getId().equals(reponseId))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Réponse non trouvée"));
-
-        reponse.annulerCorrection();
-
-        tentative.recalculerScoreTotal();
-        tentative.setCorrigee(false);
-
-        tentativeRepository.save(tentative);
-
-        return reponse;
     }
 
 
@@ -303,28 +295,5 @@ public class TentativeService {
             System.out.println("Sauvegarde auto: " + tentativesEnCours.size() + " tentatives traitées");
         }
     }
-
-
-    @Scheduled(cron = "0 0 2 * * ?") // Tous les jours à 2h du matin
-    @Transactional
-    public void nettoyerTentativesExpirees() {
-        LocalDateTime maintenant = LocalDateTime.now();
-        List<Tentative> tentativesExpirees = tentativeRepository
-                .findExpiredTentatives(StatutTentative.EN_COURS, maintenant);
-
-        for (Tentative tentative : tentativesExpirees) {
-            try {
-                tentative.soumettre();
-                tentativeRepository.save(tentative);
-            } catch (Exception e) {
-                return;
-            }
-        }
-
-        if (!tentativesExpirees.isEmpty()) {
-            System.out.println("Nettoyage: " + tentativesExpirees.size() + " tentatives expirées soumises");
-        }
-    }
-
 
 }
