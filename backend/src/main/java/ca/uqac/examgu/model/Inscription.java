@@ -1,6 +1,7 @@
 package ca.uqac.examgu.model;
 
 import ca.uqac.examgu.model.Enumerations.StatutInscription;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.Objects;
 import java.util.UUID;
@@ -22,6 +23,7 @@ public class Inscription {
 
     @ManyToOne
     @JoinColumn(name = "examen_id")
+    @JsonIgnore
     private Examen examen;
 
     public Inscription() {}

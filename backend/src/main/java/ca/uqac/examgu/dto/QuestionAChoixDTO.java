@@ -17,13 +17,14 @@ public class QuestionAChoixDTO {
     private int nombreChoixMin;
     private int nombreChoixMax;
     private PolitiqueCorrectionQCM politiqueCorrectionQCM;
+    private List<ReponsePossibleDTO> options;
 
-    // Constructeurs
     public QuestionAChoixDTO() {}
 
     public QuestionAChoixDTO(UUID id, String enonce, double bareme, UUID examenId,
                              QuestionAChoix.TypeChoix typeChoix,
-                             int nombreChoixMin, int nombreChoixMax, PolitiqueCorrectionQCM politiqueCorrectionQCM) {
+                             int nombreChoixMin, int nombreChoixMax, PolitiqueCorrectionQCM politiqueCorrectionQCM,
+                             List<ReponsePossibleDTO> options) {
         this.id = id;
         this.enonce = enonce;
         this.bareme = bareme;
@@ -32,7 +33,9 @@ public class QuestionAChoixDTO {
         this.nombreChoixMin = nombreChoixMin;
         this.nombreChoixMax = nombreChoixMax;
         this.politiqueCorrectionQCM = politiqueCorrectionQCM;
+        this.options = options;
     }
+
 
 
     // Getters et Setters
@@ -63,5 +66,13 @@ public class QuestionAChoixDTO {
 
     public void setPolitiqueCorrectionQCM(PolitiqueCorrectionQCM politiqueCorrectionQCM) {
         this.politiqueCorrectionQCM = politiqueCorrectionQCM;
+    }
+
+    public List<ReponsePossibleDTO> getOptions() {
+        return options;
+    }
+
+    public void setOptions(List<ReponsePossibleDTO> options) {
+        this.options = options;
     }
 }

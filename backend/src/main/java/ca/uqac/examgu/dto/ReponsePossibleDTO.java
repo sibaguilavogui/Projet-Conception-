@@ -2,12 +2,15 @@
 package ca.uqac.examgu.dto;
 
 import ca.uqac.examgu.model.ReponsePossible;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.UUID;
 
 public class ReponsePossibleDTO {
     private UUID id;
+    @JsonProperty("texte")
     private String libelle;
+    @JsonProperty("estCorrecte")
     private boolean correcte;
 
     // Constructeurs
@@ -33,8 +36,10 @@ public class ReponsePossibleDTO {
     public void setId(UUID id) { this.id = id; }
 
     public String getLibelle() { return libelle; }
+    @JsonProperty("texte")
     public void setLibelle(String libelle) { this.libelle = libelle; }
 
     public boolean isCorrecte() { return correcte; }
+    @JsonProperty("estCorrecte")
     public void setCorrecte(boolean correcte) { this.correcte = correcte; }
 }

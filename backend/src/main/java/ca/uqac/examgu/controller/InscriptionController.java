@@ -21,33 +21,12 @@ public class InscriptionController {
         this.examenService = examenService;
     }
 
-
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{examenId}/{etudiantId}")
-    public ResponseEntity<?> inscrireEtudiant(@PathVariable UUID examenId, @PathVariable UUID etudiantId) {
-        try {
-            Inscription inscription = inscriptionService.inscrireEtudiant(examenId, etudiantId);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("id", inscription.getId());
-            response.put("statut", inscription.getStatut());
-            response.put("message", "Étudiant inscrit avec succès");
-            response.put("etudiantEmail", inscription.getEtudiant().getEmail());
-            response.put("examenTitre", inscription.getExamen().getTitre());
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
-        }
+    @GetMapping
+    public ResponseEntity<?> getInscriptions(){
+        return ResponseEntity.ok(inscriptionService.getInscriptions());
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{examenId}/{etudiantId}")
-    public ResponseEntity<?> desinscrireEtudiant(@PathVariable UUID examenId, @PathVariable UUID etudiantId) {
-        inscriptionService.desinscrireEtudiant(examenId, etudiantId);
-        return ResponseEntity.ok().build();
-    }
 
 }
 

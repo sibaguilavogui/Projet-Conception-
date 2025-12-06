@@ -39,12 +39,6 @@ public abstract class Question {
         this.examen=examen;
     }
 
-    public abstract boolean estAutoCorrectible();
-
-    public boolean estCorrigeableAutomatiquement() {
-        return estAutoCorrectible();
-    }
-
     public String getTypeQuestion() {
         if (this instanceof QuestionAChoix) {
             QuestionAChoix qac = (QuestionAChoix) this;

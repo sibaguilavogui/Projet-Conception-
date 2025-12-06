@@ -1,11 +1,13 @@
 package ca.uqac.examgu.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.persistence.GenerationType;
 
 import java.util.UUID;
 
 @Entity
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ReponsePossible {
 
     @Id

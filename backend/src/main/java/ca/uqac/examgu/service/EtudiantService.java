@@ -123,6 +123,11 @@ public class EtudiantService {
         }
     }
 
+
+    public List<Inscription> getInscriptionsEtudiant(UUID etudiantId) {
+        return inscriptionRepository.findByEtudiantId(etudiantId);
+    }
+
     public Optional<Etudiant> findByEmail(String email) {
         return etudiantRepository.findByEmail(email);
     }

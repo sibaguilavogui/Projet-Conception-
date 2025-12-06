@@ -16,14 +16,13 @@ public interface TentativeRepository extends JpaRepository<Tentative, UUID> {
 
     Optional<Tentative> findByExamenIdAndEtudiantId(UUID examenId, UUID etudiantId);
 
-    List<Tentative> findByEtudiantId(UUID etudiantId);
-
     List<Tentative> findByExamenId(UUID examenId);
 
-    List<Tentative> findByStatutAndDebutAfter(StatutTentative statut, LocalDateTime debutMin);
+    List<Tentative> findByStatut(StatutTentative statut);
 
     @Query("SELECT t FROM Tentative t WHERE t.statut = :statut AND t.fin < :now")
-    List<Tentative> findExpiredTentatives(@Param("statut") StatutTentative statut, @Param("now") LocalDateTime now);
+    List<Tentative> findExpiredTentatives(@Param("statut") StatutTentative statut,
+                                          @Param("now") LocalDateTime now);
 
     void deleteByExamen(Examen examen);
 }

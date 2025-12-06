@@ -41,20 +41,37 @@ public class TentativeService {
             throw new SecurityException("L'étudiant n'est pas inscrit à cet examen");
         }
 
-        if (!examen.estOuvert()) {
+        if (!examen.estDisponible()) {
             throw new IllegalStateException("L'examen n'est pas disponible en ce moment");
         }
 
+        // Chercher une tentative existante pour cet étudiant et cet examen
         Optional<Tentative> tentativeExistante = tentativeRepository
                 .findByExamenIdAndEtudiantId(examenId, etudiantId);
 
         if (tentativeExistante.isPresent()) {
             Tentative tentative = tentativeExistante.get();
+
+            // Si la tentative est en cours et la deadline n'est pas atteinte
             if (tentative.getStatut() == StatutTentative.EN_COURS && !tentative.estExpiree()) {
+                return tentative; // Retourner la tentative existante avec ses réponses sauvegardées
+            }
+
+            // Si la tentative est en cours mais expirée, ne pas la soumettre automatiquement
+            // Laissez l'étudiant voir qu'elle est expirée
+            if (tentative.getStatut() == StatutTentative.EN_COURS && tentative.estExpiree()) {
+                // Retourner la tentative expirée sans la soumettre
+                // L'étudiant pourra voir qu'elle est expirée mais pas la modifier
+                return tentative;
+            }
+
+            // Si la tentative est déjà soumise, la retourner
+            if (tentative.getStatut() == StatutTentative.SOUMISE) {
                 return tentative;
             }
         }
 
+        // Créer une nouvelle tentative
         Tentative nouvelleTentative = new Tentative(examen, etudiant);
         nouvelleTentative.demarrer();
         return tentativeRepository.save(nouvelleTentative);
@@ -72,9 +89,8 @@ public class TentativeService {
             throw new IllegalStateException("La tentative ne peut plus être modifiée");
         }
 
-        tentative.sauvegarderReponse(questionId, contenu, LocalDateTime.now());
+        tentative.sauvegarderReponse(questionId, contenu);
 
-        tentative.setDateModification(LocalDateTime.now());
         return tentativeRepository.save(tentative);
     }
 
@@ -86,7 +102,7 @@ public class TentativeService {
             throw new SecurityException("Accès non autorisé à cette tentative");
         }
 
-        tentative.soumettre(LocalDateTime.now());
+        tentative.soumettre();
 
         return tentativeRepository.save(tentative);
     }
@@ -104,7 +120,7 @@ public class TentativeService {
         }
 
         if (tentative.estExpiree()) {
-            tentative.soumettre(LocalDateTime.now());
+            tentative.soumettre();
             throw new IllegalStateException("La tentative était expirée et a été soumise automatiquement");
         }
         return tentativeRepository.save(tentative);
@@ -144,12 +160,11 @@ public class TentativeService {
 
         return toutesTentatives.stream()
                 .filter(tentative -> {
-                    if (tentative.getStatut() != StatutTentative.SOUMISE &&
-                            tentative.getStatut() != StatutTentative.EXPIREE) {
+                    if (tentative.getStatut() != StatutTentative.SOUMISE) {
                         return false;
                     }
 
-                    if (tentative.isEstCorrigee()) {
+                    if (tentative.estCorrigee()) {
                         return false;
                     }
 
@@ -174,8 +189,7 @@ public class TentativeService {
             throw new SecurityException("Accès non autorisé à cette tentative");
         }
 
-        if (tentative.getStatut() != StatutTentative.SOUMISE &&
-                tentative.getStatut() != StatutTentative.EXPIREE) {
+        if (tentative.getStatut() != StatutTentative.SOUMISE) {
             throw new IllegalStateException("Cette tentative ne peut pas être corrigée");
         }
 
@@ -259,24 +273,29 @@ public class TentativeService {
     }
 
 
-    @Scheduled(fixedRate = 30000) // 30 secondes
+    @Scheduled(fixedRate = 30000) // Toutes les 30 secondes
     @Transactional
     public void sauvegarderTentativesEnCours() {
         LocalDateTime maintenant = LocalDateTime.now();
 
         List<Tentative> tentativesEnCours = tentativeRepository
-                .findByStatutAndDebutAfter(StatutTentative.EN_COURS, maintenant.minusHours(4));
+                .findByStatut(StatutTentative.EN_COURS);
 
         for (Tentative tentative : tentativesEnCours) {
             try {
-                if (tentative.estExpiree(maintenant)) {
-                    tentative.soumettre(maintenant);
-                }
-
+                // Sauvegarder la tentative
                 tentativeRepository.save(tentative);
 
+                // Vérifier si la deadline est atteinte
+                if (tentative.estExpiree()) {
+                    // Soumettre automatiquement la tentative
+                    tentative.soumettre();
+                    tentativeRepository.save(tentative);
+                    System.out.println("Tentative " + tentative.getId() + " soumise automatiquement (deadline atteinte)");
+                }
+
             } catch (Exception e) {
-                return;
+                System.err.println("Erreur lors de la sauvegarde de la tentative " + tentative.getId() + ": " + e.getMessage());
             }
         }
 
@@ -295,7 +314,7 @@ public class TentativeService {
 
         for (Tentative tentative : tentativesExpirees) {
             try {
-                tentative.soumettre(maintenant);
+                tentative.soumettre();
                 tentativeRepository.save(tentative);
             } catch (Exception e) {
                 return;

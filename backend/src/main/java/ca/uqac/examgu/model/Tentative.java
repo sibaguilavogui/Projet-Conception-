@@ -1,6 +1,8 @@
 package ca.uqac.examgu.model;
 
 import ca.uqac.examgu.model.Enumerations.StatutTentative;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -8,6 +10,7 @@ import java.util.*;
 
 @Entity
 @Table(name = "tentatives")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "hibernateProxy", "persistentBag"})
 public class Tentative {
 
     @Id
@@ -27,6 +30,17 @@ public class Tentative {
     @Column(nullable = false)
     private double score;
 
+    @Column(name = "note_finale")
+    private double noteFinale = 0.0;
+
+    @Column(name = "est_note_finale_calculee")
+    private boolean estNoteFinaleCalculee = false;
+
+    @Column(name = "date_calcul_note")
+    private LocalDateTime dateCalculNote;
+
+
+
     @Column(name = "est_corrigee")
     private boolean estCorrigee = false;
 
@@ -35,6 +49,7 @@ public class Tentative {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "examen_id", nullable = false)
+    @JsonIgnore
     private Examen examen;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -42,6 +57,7 @@ public class Tentative {
     private Etudiant etudiant;
 
     @OneToMany(mappedBy = "tentative", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<ReponseDonnee> reponses = new ArrayList<>();
 
     @Column(name = "date_creation", nullable = false)
@@ -67,15 +83,7 @@ public class Tentative {
 
     // Méthodes métier principales
     public void demarrer() {
-        demarrer(LocalDateTime.now());
-    }
-
-    public void demarrer(LocalDateTime now) {
-        Objects.requireNonNull(now, "La date ne peut pas être null");
-
-        if (debut != null) {
-            throw new IllegalStateException("La tentative a déjà été démarrée");
-        }
+        LocalDateTime now = LocalDateTime.now();
 
         this.debut = now;
         this.fin = calculerDateFin();
@@ -84,14 +92,11 @@ public class Tentative {
     }
 
     public void sauvegarderReponse(UUID questionId, String contenu) {
-        sauvegarderReponse(questionId, contenu, LocalDateTime.now());
-    }
+        LocalDateTime now = LocalDateTime.now();
 
-    public void sauvegarderReponse(UUID questionId, String contenu, LocalDateTime now) {
-        Objects.requireNonNull(now, "La date ne peut pas être null");
-
-        if (!peutModifier(now)) {
-            throw new IllegalStateException("Impossible de modifier la tentative dans l'état actuel");
+        // Vérifier si la tentative peut encore être modifiée
+        if (!peutModifier()) {
+            throw new IllegalStateException("La tentative ne peut plus être modifiée (soumise ou deadline atteinte)");
         }
 
         Question question = examen.trouverQuestion(questionId);
@@ -112,11 +117,7 @@ public class Tentative {
     }
 
     public void soumettre() {
-        soumettre(LocalDateTime.now());
-    }
-
-    public void soumettre(LocalDateTime now) {
-        Objects.requireNonNull(now, "La date ne peut pas être null");
+        LocalDateTime now = LocalDateTime.now();
 
         if (statut != StatutTentative.EN_COURS) {
             throw new IllegalStateException("Seules les tentatives en cours peuvent être soumises");
@@ -124,20 +125,18 @@ public class Tentative {
 
         this.fin = now;
         this.dateSoumission = now;
-        this.statut = estExpiree(now) ? StatutTentative.EXPIREE : StatutTentative.SOUMISE;
+        this.statut = StatutTentative.SOUMISE;
 
+        // Corriger automatiquement les questions QCM
         corrigerAutomatiquement();
 
+        // Recalculer le score total
         recalculerScoreTotal();
         this.dateModification = now;
     }
 
     public int tempsRestant() {
-        return tempsRestant(LocalDateTime.now());
-    }
-
-    public int tempsRestant(LocalDateTime now) {
-        Objects.requireNonNull(now, "La date ne peut pas être null");
+        LocalDateTime now = LocalDateTime.now();
 
         LocalDateTime deadline = calculerDeadline();
         if (deadline == null || now.isAfter(deadline)) {
@@ -149,14 +148,17 @@ public class Tentative {
     }
 
     public boolean estExpiree() {
-        return estExpiree(LocalDateTime.now());
-    }
-
-    public boolean estExpiree(LocalDateTime now) {
-        Objects.requireNonNull(now, "La date ne peut pas être null");
-
+        LocalDateTime now = LocalDateTime.now();
         LocalDateTime deadline = calculerDeadline();
-        return deadline != null && now.isAfter(deadline);
+
+        // Vérifier si la deadline est dépassée
+        if (deadline != null && now.isAfter(deadline)) {
+            // Si la tentative est encore en cours, elle doit être soumise automatiquement
+            if (statut == StatutTentative.EN_COURS) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void corrigerAutomatiquement() {
@@ -216,11 +218,20 @@ public class Tentative {
                 .sum();
     }
 
+    public void calculerNoteFinale() {
+        this.noteFinale = this.reponses.stream()
+                .mapToDouble(ReponseDonnee::getNotePartielle)
+                .sum();
+        this.estNoteFinaleCalculee = true;
+        this.dateCalculNote = LocalDateTime.now();
+    }
+
     private LocalDateTime calculerDeadline() {
         if (debut == null) {
             return null;
         }
 
+        // La deadline est soit la date de fin de l'examen, soit le début + durée de l'examen
         LocalDateTime deadlineParDuree = debut.plusMinutes(Math.max(0, examen.getDureeMinutes()));
         LocalDateTime finExamen = examen.getDateFin();
 
@@ -228,6 +239,7 @@ public class Tentative {
             return deadlineParDuree;
         }
 
+        // Retourner la plus proche des deux dates
         return deadlineParDuree.isBefore(finExamen) ? deadlineParDuree : finExamen;
     }
 
@@ -238,19 +250,9 @@ public class Tentative {
         return debut.plusMinutes(Math.max(0, examen.getDureeMinutes()));
     }
 
-    private boolean peutModifier(LocalDateTime now) {
-        if (statut != StatutTentative.EN_COURS) {
-            return false;
-        }
-        if (debut == null) {
-            return false;
-        }
-        if (estExpiree(now)) {
-            this.statut = StatutTentative.EXPIREE;
-            this.fin = now;
-            return false;
-        }
-        return true;
+    private boolean peutModifier() {
+        // Une tentative ne peut être modifiée que si elle est en cours ET non expirée
+        return statut == StatutTentative.EN_COURS && !estExpiree();
     }
 
     private ReponseDonnee trouverReponse(UUID questionId) {
@@ -265,7 +267,7 @@ public class Tentative {
     }
 
     public boolean estCompletee() {
-        return statut == StatutTentative.SOUMISE || statut == StatutTentative.EXPIREE;
+        return statut == StatutTentative.SOUMISE;
     }
 
     public boolean peutEtreCorrigee() {
@@ -352,7 +354,7 @@ public class Tentative {
         this.dateModification = LocalDateTime.now();
     }
 
-    public boolean isEstCorrigee() {
+    public boolean estCorrigee() {
         return estCorrigee;
     }
 
@@ -429,6 +431,68 @@ public class Tentative {
 
     public void setDateModification(LocalDateTime dateModification) {
         this.dateModification = dateModification;
+    }
+
+    public double getNoteFinale() {
+        return noteFinale;
+    }
+
+    public void setNoteFinale(double noteFinale) {
+        this.noteFinale = noteFinale;
+        this.estNoteFinaleCalculee = true;
+        this.dateCalculNote = LocalDateTime.now();
+    }
+
+    public boolean isEstNoteFinaleCalculee() {
+        return estNoteFinaleCalculee;
+    }
+
+    public void setEstNoteFinaleCalculee(boolean estNoteFinaleCalculee) {
+        this.estNoteFinaleCalculee = estNoteFinaleCalculee;
+    }
+
+    public LocalDateTime getDateCalculNote() {
+        return dateCalculNote;
+    }
+
+    public void setDateCalculNote(LocalDateTime dateCalculNote) {
+        this.dateCalculNote = dateCalculNote;
+    }
+
+    public Map<String, Object> getInfosPourComposition() {
+        Map<String, Object> infos = new HashMap<>();
+
+        infos.put("id", id);
+        infos.put("debut", debut);
+        infos.put("fin", fin);
+        infos.put("statut", statut);
+        infos.put("estExpiree", estExpiree());
+        infos.put("tempsRestant", tempsRestant());
+        infos.put("score", score);
+        infos.put("estCorrigee", estCorrigee);
+        infos.put("dateSoumission", dateSoumission);
+
+        // Infos sur l'étudiant (limitées)
+        Map<String, Object> etudiantInfo = new HashMap<>();
+        etudiantInfo.put("id", etudiant.getId());
+        etudiantInfo.put("nomComplet", etudiant.getNom() + " " + etudiant.getPrenom());
+        infos.put("etudiant", etudiantInfo);
+
+        // Infos sur l'examen (limitées)
+        Map<String, Object> examenInfo = new HashMap<>();
+        examenInfo.put("id", examen.getId());
+        examenInfo.put("titre", examen.getTitre());
+        examenInfo.put("description", examen.getDescription());
+        examenInfo.put("dureeMinutes", examen.getDureeMinutes());
+        examenInfo.put("nombreQuestions", examen.getQuestions().size());
+        examenInfo.put("barèmeTotal", examen.totalPoints());
+        infos.put("examen", examenInfo);
+
+        // Progression
+        infos.put("nombreQuestionsRepondues", getNombreQuestionsRepondues());
+        infos.put("pourcentageCompletion", getPourcentageCompletion());
+
+        return infos;
     }
 
     // Méthodes de cycle de vie JPA

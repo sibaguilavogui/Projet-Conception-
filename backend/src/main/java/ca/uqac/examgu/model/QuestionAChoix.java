@@ -136,9 +136,9 @@ public class QuestionAChoix extends Question {
                 case TOUT_OU_RIEN:
                     return calculerNoteToutOuRien(bonnesReponsesSelectionnees, mauvaisesReponsesSelectionnees,
                             totalBonnesReponses);
-                case MOYENNE_BONS:
+                case MOYENNE_BONNES:
                     return calculerNoteMoyenneBons(bonnesReponsesSelectionnees, totalBonnesReponses);
-                case ANNULATION:
+                case MOYENNE_BONNES_ET_MAUVAISES:
                     return calculerNoteAnnulation(bonnesReponsesSelectionnees, mauvaisesReponsesSelectionnees,
                             totalBonnesReponses);
                 default:
@@ -178,11 +178,6 @@ public class QuestionAChoix extends Question {
 
     public void setPolitiqueCorrectionQCM(PolitiqueCorrectionQCM politiqueCorrectionQCM) {
         this.politiqueCorrectionQCM = politiqueCorrectionQCM;
-    }
-
-    @Override
-    public boolean estAutoCorrectible() {
-        return true;
     }
 
     public TypeChoix getTypeChoix() {

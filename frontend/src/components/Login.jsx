@@ -8,12 +8,15 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(''); // État pour l'erreur
 
   const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(''); // Réinitialiser l'erreur à chaque tentative
     setIsLoading(true);
+    
     try {
       const response = await axios.post('http://localhost:8080/auth/login', {
         email: email,
@@ -26,6 +29,21 @@ const Login = () => {
 
     } catch (error) {
       console.error('Erreur de connexion:', error);
+      
+      if (error.response) {
+        // Le serveur a répondu avec un statut d'erreur
+        if (error.response.status === 401) {
+          setError('Identifiants invalides. Veuillez réessayer.');
+        } else if (error.response.status === 400) {
+          setError('Veuillez vérifier les champs saisis.');
+        } else {
+          setError('Une erreur est survenue. Veuillez réessayer plus tard.');
+        }
+      } else if (error.request) {
+        setError('Impossible de contacter le serveur. Vérifiez votre connexion.');
+      } else {
+        setError('Erreur de configuration de la requête.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -42,6 +60,9 @@ const Login = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="login-form">
+        {/* Afficher l'erreur si elle existe */}
+        {error && <div className="error-message">{error}</div>}
+
         <div className="input-group">
           <div className="input-row">
             <label htmlFor="email" className="input-label">Email</label>
@@ -49,7 +70,10 @@ const Login = () => {
               id="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError('');
+              }}
               className="email-input"
               required
             />
@@ -62,7 +86,10 @@ const Login = () => {
                 id="password"
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
                 className="password-input"
                 required
               />
@@ -83,7 +110,6 @@ const Login = () => {
           </button>
         </div>
       </form>
-
     </div>
   );
 };

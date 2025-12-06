@@ -1,26 +1,22 @@
 package ca.uqac.examgu.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 
 import java.time.LocalDateTime;
 
 public class ExamenDTO {
     private String titre;
-    @JsonFormat(pattern = "dd-MM-yyyy'T'HH:mm:ss")
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    @JsonFormat(pattern = "yyyy-MM-dd['T'][ ]HH:mm[:ss]")
     private LocalDateTime dateDebut;
-    @JsonFormat(pattern = "dd-MM-yyyy'T'HH:mm:ss")
+
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    @JsonFormat(pattern = "yyyy-MM-dd['T'][ ]HH:mm[:ss]")
     private LocalDateTime dateFin;
     private int dureeMinutes;
     private String description;
-    private boolean notationAutomatique = false;
-
-    public boolean isNotationAutomatique() {
-        return notationAutomatique;
-    }
-
-    public void setNotationAutomatique(boolean notationAutomatique) {
-        this.notationAutomatique = notationAutomatique;
-    }
 
     public LocalDateTime getDateDebut() {
         return dateDebut;

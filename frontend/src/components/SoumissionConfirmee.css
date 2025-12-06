@@ -1,0 +1,280 @@
+.soumission-confirmee {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.confirmation-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.checkmark {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+  position: relative;
+}
+
+.checkmark-circle {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: #28a745;
+  animation: scaleIn 0.5s ease-out;
+}
+
+.checkmark-stem {
+  position: absolute;
+  width: 8px;
+  height: 30px;
+  background-color: white;
+  left: 46px;
+  top: 30px;
+  transform: rotate(45deg);
+  animation: drawStem 0.5s ease-out 0.5s forwards;
+  opacity: 0;
+}
+
+.checkmark-kick {
+  position: absolute;
+  width: 8px;
+  height: 15px;
+  background-color: white;
+  left: 30px;
+  top: 46px;
+  transform: rotate(-45deg);
+  animation: drawKick 0.5s ease-out 0.7s forwards;
+  opacity: 0;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+@keyframes drawStem {
+  from { height: 0; opacity: 1; }
+  to { height: 30px; opacity: 1; }
+}
+
+@keyframes drawKick {
+  from { width: 0; opacity: 1; }
+  to { width: 8px; opacity: 1; }
+}
+
+.confirmation-header h2 {
+  color: #28a745;
+  margin-bottom: 0.5rem;
+}
+
+.confirmation-header p {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.confirmation-content {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 2rem;
+}
+
+.exam-summary {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.exam-summary h3 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+}
+
+.summary-details {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summary-label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.summary-value {
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.summary-value.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.statut-termine {
+  background-color: #28a745;
+  color: white;
+}
+
+.score-section {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.score-section h3 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+}
+
+.score-display {
+  text-align: center;
+}
+
+.score-numbers {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.score-actuel {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.score-separator {
+  font-size: 2rem;
+  color: #666;
+}
+
+.score-maximum {
+  font-size: 2rem;
+  color: #666;
+}
+
+.score-percentage {
+  margin-bottom: 1.5rem;
+}
+
+.percentage-badge {
+  display: inline-block;
+  padding: 0.5rem 1.5rem;
+  border-radius: 30px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: white;
+}
+
+.note-excellente {
+  background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.note-bonne {
+  background: linear-gradient(135deg, #17a2b8, #20c997);
+}
+
+.note-moyenne {
+  background: linear-gradient(135deg, #ffc107, #fd7e14);
+}
+
+.note-faible {
+  background: linear-gradient(135deg, #dc3545, #fd7e14);
+}
+
+.score-message {
+  color: #666;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.score-loading {
+  text-align: center;
+  padding: 2rem;
+}
+
+.score-loading .spinner {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 1rem;
+}
+
+.next-steps {
+  margin-bottom: 2rem;
+}
+
+.next-steps h4 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+}
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.step {
+  text-align: center;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  transition: transform 0.3s;
+}
+
+.step:hover {
+  transform: translateY(-5px);
+}
+
+.step-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.step-content h5 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.step-content p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.confirmation-actions {
+  text-align: center;
+  padding-top: 2rem;
+}
+
+@media (max-width: 768px) {
+  .summary-details {
+    grid-template-columns: 1fr;
+  }
+  
+  .steps-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .score-actuel {
+    font-size: 2.5rem;
+  }
+  
+  .score-maximum {
+    font-size: 1.5rem;
+  }
+}

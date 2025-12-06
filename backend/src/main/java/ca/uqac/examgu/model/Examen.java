@@ -3,9 +3,8 @@ package ca.uqac.examgu.model;
 import ca.uqac.examgu.model.Enumerations.EtatExamen;
 import ca.uqac.examgu.model.Enumerations.PolitiqueCorrectionQCM;
 import ca.uqac.examgu.model.Enumerations.StatutInscription;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -37,16 +36,25 @@ public class Examen {
 
     @ManyToOne
     @JoinColumn(name = "createur_id", nullable = false)
+    @JsonIgnore
     private Enseignant createur;
 
     @OneToMany(mappedBy = "examen", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private final List<Question> questions = new ArrayList<>();
 
     @OneToMany(mappedBy = "examen", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private final List<Inscription> inscriptions = new ArrayList<>();
 
     @OneToOne(mappedBy = "examen", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private NotePublication publication;
+
+    @Column(name = "notes_visibles")
+    private boolean notesVisibles = false;
+
+    @Column(name = "date_publication_notes")
+    private LocalDateTime datePublicationNotes;
 
     @Column(name = "date_creation", nullable = false)
     private LocalDateTime dateCreation = LocalDateTime.now();
@@ -92,22 +100,23 @@ public class Examen {
     }
 
     public boolean estDisponible() {
-        return estDisponible(LocalDateTime.now());
-    }
+        // Un examen est disponible si:
+        // 1. Il est dans l'état OUVERT
+        // 2. La date actuelle est entre dateDebut et dateFin
+        LocalDateTime now = LocalDateTime.now();
+        if (etat != EtatExamen.OUVERT) {
+            return false;
+        }
 
-    public boolean estDisponible(LocalDateTime now) {
         if (now == null || dateDebut == null || dateFin == null) {
             return false;
         }
+
         return !now.isBefore(dateDebut) && !now.isAfter(dateFin);
     }
 
     public boolean estOuvert() {
-        return estOuvert(LocalDateTime.now());
-    }
-
-    public boolean estOuvert(LocalDateTime now) {
-        return etat == EtatExamen.OUVERT && estDisponible(now);
+        return etat == EtatExamen.OUVERT && estDisponible();
     }
 
     public List<String> getValidationsPourEtatPret(){
@@ -220,7 +229,7 @@ public class Examen {
                         erreurs.add(String.format("Question %d (QCM): La politique de correction doit être définie", i + 1));
                     }
 
-                    if (qChoix.getPolitiqueCorrectionQCM() == PolitiqueCorrectionQCM.ANNULATION) {
+                    if (qChoix.getPolitiqueCorrectionQCM() == PolitiqueCorrectionQCM.MOYENNE_BONNES_ET_MAUVAISES) {
                         long nbBonnesReponses = choix.stream()
                                 .filter(ReponsePossible::isCorrecte)
                                 .count();
@@ -271,12 +280,17 @@ public class Examen {
 
     public QuestionAChoix ajouterQuestionAChoix(String enonce, double bareme, QuestionAChoix.TypeChoix typeChoix,
                                                 int nombreChoixMin, int nombreChoixMax,
-                                                PolitiqueCorrectionQCM politiqueCorrection) {
+                                                PolitiqueCorrectionQCM politiqueCorrection, List<ReponsePossible> options) {
         QuestionAChoix question = new QuestionAChoix(enonce, bareme, typeChoix,
                 nombreChoixMin, nombreChoixMax, politiqueCorrection, this);
 
         if (etat != EtatExamen.BROUILLON) {
             throw new IllegalStateException("Impossible d'ajouter des questions à un examen non brouillon");
+        }
+        if (options != null) {
+            for (ReponsePossible option : options) {
+                question.ajouterReponsePossible(option);
+            }
         }
 
         this.questions.add(question);
@@ -345,7 +359,10 @@ public class Examen {
     }
 
     public boolean peutDemarrerTentative(Etudiant etudiant) {
-        return estOuvert() && estInscrit(etudiant);
+        // Un étudiant peut démarrer une tentative si:
+        // 1. L'examen est disponible
+        // 2. L'étudiant est inscrit
+        return estDisponible() && estInscrit(etudiant);
     }
 
     public long getTempsRestant(LocalDateTime maintenant) {
@@ -353,6 +370,40 @@ public class Examen {
             return 0;
         }
         return Duration.between(maintenant, dateFin).toMinutes();
+    }
+
+    public void publierNotes() {
+        this.notesVisibles = true;
+        this.datePublicationNotes = LocalDateTime.now();
+    }
+
+    public void masquerNotes() {
+        this.notesVisibles = false;
+        this.datePublicationNotes = null;
+    }
+
+    public boolean sontNotesVisibles() {
+        return notesVisibles;
+    }
+
+    // Getters et Setters
+    public boolean isNotesVisibles() {
+        return notesVisibles;
+    }
+
+    public void setNotesVisibles(boolean notesVisibles) {
+        this.notesVisibles = notesVisibles;
+        if (notesVisibles && datePublicationNotes == null) {
+            this.datePublicationNotes = LocalDateTime.now();
+        }
+    }
+
+    public LocalDateTime getDatePublicationNotes() {
+        return datePublicationNotes;
+    }
+
+    public void setDatePublicationNotes(LocalDateTime datePublicationNotes) {
+        this.datePublicationNotes = datePublicationNotes;
     }
 
     public UUID getId() {

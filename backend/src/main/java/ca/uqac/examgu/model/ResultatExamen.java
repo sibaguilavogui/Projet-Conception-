@@ -1,5 +1,6 @@
 package ca.uqac.examgu.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ public class ResultatExamen {
 
     @ManyToOne
     @JoinColumn(name = "examen_id", nullable = false)
+    @JsonIgnore
     private Examen examen;
 
     @ManyToOne
@@ -20,6 +22,7 @@ public class ResultatExamen {
 
     @OneToOne
     @JoinColumn(name = "tentative_id")
+    @JsonIgnore
     private Tentative tentative;
 
     private double score;

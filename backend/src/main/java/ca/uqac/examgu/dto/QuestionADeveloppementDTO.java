@@ -9,7 +9,6 @@ public class QuestionADeveloppementDTO {
     private String enonce;
     private double bareme;
     private UUID examenId;
-    private boolean estAutoCorrectible;
 
     // Constructeurs
     public QuestionADeveloppementDTO() {}
@@ -20,7 +19,6 @@ public class QuestionADeveloppementDTO {
         this.enonce = enonce;
         this.bareme = bareme;
         this.examenId = examenId;
-        this.estAutoCorrectible = estAutoCorrectible;
     }
 
     // Getters et Setters
@@ -36,8 +34,4 @@ public class QuestionADeveloppementDTO {
     public UUID getExamenId() { return examenId; }
     public void setExamenId(UUID examenId) { this.examenId = examenId; }
 
-    public boolean isEstAutoCorrectible() { return estAutoCorrectible; }
-    public void setEstAutoCorrectible(boolean estAutoCorrectible) {
-        this.estAutoCorrectible = estAutoCorrectible;
-    }
 }

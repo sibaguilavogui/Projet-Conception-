@@ -43,13 +43,8 @@ public class InscriptionService {
         inscriptionRepository.delete(inscription);
     }
 
-    public List<Inscription> listerInscriptions(UUID examenId) {
-        Examen e = examenRepository.findById(examenId)
-                .orElseThrow(()->new RuntimeException("Examen non trouvé"));
-        return inscriptionRepository.findByExamenId(examenId);
+    public List<Inscription> getInscriptions(){
+        return inscriptionRepository.findAll();
     }
 
-    public List<Inscription> getInscriptionsEtudiant(UUID etudiantId) {
-        return inscriptionRepository.findByEtudiantId(etudiantId);
-    }
 }

@@ -1,6 +1,7 @@
 package ca.uqac.examgu.model;
 
 import ca.uqac.examgu.model.Enumerations.EtatExamen;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -25,6 +26,7 @@ public class NotePublication {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "examen_id", nullable = false, unique = true)
+    @JsonIgnore
     private Examen examen;
 
     @Column(name = "message_publication")

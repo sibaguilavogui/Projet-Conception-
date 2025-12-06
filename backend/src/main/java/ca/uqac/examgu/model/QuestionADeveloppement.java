@@ -16,11 +16,6 @@ public class QuestionADeveloppement extends Question {
     }
 
     @Override
-    public boolean estAutoCorrectible() {
-        return false;
-    }
-
-    @Override
     public String toString() {
         return String.format("QuestionADeveloppement{id=%s, enonce='%s', bareme=%.1f}",
                 getId(), getEnonce(), getBareme());

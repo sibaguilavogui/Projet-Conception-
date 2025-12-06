@@ -1,5 +1,6 @@
 package ca.uqac.examgu.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -15,6 +16,7 @@ public class ReponseDonnee {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id", nullable = false)
+    @JsonIgnore
     private Question question;
 
     @Column(length = 2000)
@@ -22,6 +24,7 @@ public class ReponseDonnee {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tentative_id", nullable = false)
+    @JsonIgnore
     private Tentative tentative;
 
     @Column(name = "date_maj")
