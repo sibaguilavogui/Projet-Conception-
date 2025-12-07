@@ -1,3 +1,5 @@
+
+
 package ca.uqac.examgu.domain;
 
 import java.time.Duration;
@@ -180,6 +182,20 @@ public class Tentative {
         }
         return null;
     }
+
+    private boolean notePubliee = false;
+
+    public void publierNote() {
+        this.notePubliee = true;
+    }
+
+    public boolean isNotePubliee() {
+        return notePubliee;
+    }
+
+
+
+
 
     // ---------- Getters ----------
     public UUID getId() { return id; }

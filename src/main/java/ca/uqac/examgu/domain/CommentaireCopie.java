@@ -3,10 +3,6 @@ package ca.uqac.examgu.domain;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * Petit message de commentaire lié à une tentative d'examen.
- * Utilisé comme "mini chat" entre enseignant et étudiant.
- */
 public class CommentaireCopie {
 
     private final UUID id;
@@ -16,10 +12,15 @@ public class CommentaireCopie {
     private final Role auteurRole;
     private final String message;
 
-    public CommentaireCopie(UUID tentativeId, String auteurCode, Role auteurRole, String message) {
-        this.id = UUID.randomUUID();
+    public CommentaireCopie(UUID id,
+                            UUID tentativeId,
+                            LocalDateTime date,
+                            String auteurCode,
+                            Role auteurRole,
+                            String message) {
+        this.id = id;
         this.tentativeId = tentativeId;
-        this.date = LocalDateTime.now();
+        this.date = date;
         this.auteurCode = auteurCode;
         this.auteurRole = auteurRole;
         this.message = message;

@@ -10,6 +10,15 @@ public class ReponseDonnee {
     private String contenu;
     private LocalDateTime dateMaj;
 
+    // ==========================================================
+    // ✅ CHAMPS AJOUTÉS POUR LA CORRECTION
+    // ==========================================================
+    private double noteAutomatique = 0.0;
+    // La note manuelle est utilisée si l'enseignant corrige (prioritaire)
+    private double noteManuelle = -1.0;
+    private String commentaireCorrection;
+    // ==========================================================
+
     public ReponseDonnee(Question question) {
         this(UUID.randomUUID(), question, null, null);
     }
@@ -25,6 +34,19 @@ public class ReponseDonnee {
         this.contenu = contenu;
         this.dateMaj = now;
     }
+
+    // --- Getters et Setters pour la correction (AJOUTÉ) ---
+
+    public double getNoteAutomatique() { return noteAutomatique; }
+    public void setNoteAutomatique(double noteAutomatique) { this.noteAutomatique = noteAutomatique; }
+
+    public double getNoteManuelle() { return noteManuelle; }
+    public void setNoteManuelle(double noteManuelle) { this.noteManuelle = noteManuelle; }
+
+    public String getCommentaireCorrection() { return commentaireCorrection; }
+    public void setCommentaireCorrection(String commentaireCorrection) { this.commentaireCorrection = commentaireCorrection; }
+
+    // --- Getters existants ---
 
     public UUID getId() { return id; }
     public Question getQuestion() { return question; }

@@ -1,4 +1,6 @@
-package ca.uqac.examgu.application;
+
+
+        package ca.uqac.examgu.application;
 
 import ca.uqac.examgu.domain.*;
 
@@ -26,6 +28,40 @@ public class ExamGuSystem {
 
     // Commentaires "chat" par tentative
     private final Map<UUID, List<CommentaireCopie>> commentairesParTentative = new HashMap<>();
+
+    // ---------------- CORRECTION MANUELLE PAR ENSEIGNANT ----------------
+
+    public void corrigerQuestionManuelle(Utilisateur acteurEnseignant,
+                                         UUID tentativeId,
+                                         UUID questionId,
+                                         double note,
+                                         String commentaire) {
+        // Vérifier rôle
+        requireRole(acteurEnseignant, Role.ENSEIGNANT);
+
+        // Retrouver la tentative
+        Tentative t = getTentativeOrThrow(tentativeId);
+        Examen ex = t.getExamen();
+
+        // Vérifier que cet examen appartient bien à cet enseignant
+        if (ex == null || !acteurEnseignant.getId().equals(ex.getCreateurId())) {
+            throw new SecurityException("Accès refusé à cette tentative.");
+        }
+
+        // Appliquer la note + commentaire (0..barème déjà géré dans Tentative)
+        t.noterManuellement(questionId, note, commentaire);
+
+        log.info(() -> String.format(
+                "[CORRECTION_MANUELLE] enseignant=%s tentative=%s question=%s note=%.2f",
+                acteurEnseignant.getCode(), tentativeId, questionId, note));
+    }
+
+
+
+
+
+
+
 
     // Compteurs pour IDs humains (lisibles)
     private int nextExamNo = 1;
@@ -434,26 +470,43 @@ public class ExamGuSystem {
 
     // ---------------- COMMENTAIRES "CHAT" ----------------
 
+    // ---------------- COMMENTAIRES "CHAT" ----------------
+
     public CommentaireCopie ajouterCommentaireTentative(Utilisateur auteur,
                                                         UUID tentativeId,
                                                         String message) {
-        if (auteur == null) throw new SecurityException("Auteur manquant");
+        if (auteur == null) {
+            throw new SecurityException("Auteur manquant");
+        }
+
         Tentative t = getTentativeOrThrow(tentativeId);
+
         if (message == null || message.isBlank()) {
             throw new IllegalArgumentException("Message vide.");
         }
 
-        CommentaireCopie c = new CommentaireCopie(t.getId(),
-                auteur.getCode(), auteur.getRole(), message.trim());
+        // Nouveau constructeur à 6 paramètres :
+        CommentaireCopie c = new CommentaireCopie(
+                UUID.randomUUID(),        // id du commentaire
+                tentativeId,              // id de la tentative
+                LocalDateTime.now(),      // date du commentaire
+                auteur.getCode(),         // code auteur (ETU-0001, ENS-0001, ...)
+                auteur.getRole(),         // rôle (ETUDIANT, ENSEIGNANT, ADMIN)
+                message.trim()            // texte du message
+        );
 
         commentairesParTentative
                 .computeIfAbsent(t.getId(), id -> new ArrayList<>())
                 .add(c);
 
-        log.info(() -> String.format("[COMMENTAIRE] tentative=%s auteur=%s (%s)",
-                t.getId(), auteur.getCode(), auteur.getRole()));
+        log.info(() -> String.format(
+                "[COMMENTAIRE] tentative=%s auteur=%s (%s)",
+                t.getId(), auteur.getCode(), auteur.getRole()
+        ));
+
         return c;
     }
+
 
     public List<CommentaireCopie> listerCommentairesTentative(UUID tentativeId) {
         List<CommentaireCopie> list = commentairesParTentative.get(tentativeId);

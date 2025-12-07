@@ -15,31 +15,19 @@ public class AuthController {
         this.examGuSystem = examGuSystem;
     }
 
-    // ===== DTO =====
-    public record LoginRequest(String email, String motDePasse) {}
-    public record LoginResponse(
-            String id,
-            String code,
-            String role,
-            String email,
-            String codePermanent
-    ) {}
+    record LoginRequest(String email, String password) {}
+    record LoginResponse(String userId, String role, String code) {}
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
-        Utilisateur u = examGuSystem.authentifier(req.email(), req.motDePasse());
+        Utilisateur u = examGuSystem.authentifier(req.email, req.password);
         if (u == null) {
-            return ResponseEntity.status(401).body("Identifiants invalides.");
+            return ResponseEntity.status(401).body("Identifiants incorrects");
         }
-
-        return ResponseEntity.ok(
-                new LoginResponse(
-                        u.getId().toString(),
-                        u.getCode(),
-                        u.getRole().name(),
-                        u.getEmail(),
-                        u.getCodePermanent()
-                )
-        );
+        return ResponseEntity.ok(new LoginResponse(
+                u.getCode(),           // ETU-0001, ENS-0001, ADM-0001
+                u.getRole().name(),    // ETUDIANT / ENSEIGNANT / ADMIN
+                u.getCode()
+        ));
     }
 }

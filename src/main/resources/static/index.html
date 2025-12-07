@@ -7,7 +7,7 @@
 
   <style>
     :root {
-      --uqac-green: #7aa528;  /* vert style UQAC */
+      --uqac-green: #7aa528;
       --uqac-green-dark: #56771b;
       --uqac-grey-light: #f5f5f5;
       --uqac-grey: #e0e0e0;
@@ -64,33 +64,6 @@
 
     .hero p {
       margin: 4px 0;
-    }
-
-    .roles {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-
-    .role-btn {
-      border-radius: 999px;
-      padding: 8px 18px;
-      border: 1px solid var(--uqac-green);
-      background: white;
-      color: var(--uqac-green-dark);
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .role-btn:hover {
-      background: #eef7dd;
-    }
-
-    .role-btn.active {
-      background: var(--uqac-green);
-      color: white;
     }
 
     .card {
@@ -189,7 +162,6 @@
       color: #b71c1c;
     }
 
-    /* Cartes de questions pour la vue étudiant */
     .question-card {
       border: 1px solid #ddd;
       border-radius: 8px;
@@ -231,6 +203,28 @@
       margin-bottom: 4px;
     }
 
+    .question-correction {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 10px;
+      background: #fafafa;
+    }
+
+    .question-correction h4 {
+      margin: 0 0 4px;
+      font-size: 0.98rem;
+    }
+
+    .student-copy-question {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 8px;
+      background: #fafafa;
+      font-size: 0.9rem;
+    }
+
     @media (max-width: 700px) {
       header {
         flex-direction: column;
@@ -248,31 +242,55 @@
     <h1>Exam-GU</h1>
     <span>Plateforme d'examens en ligne – UQAC</span>
   </div>
-  <span>Prototype local (localhost)</span>
+
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span id="header-session" style="font-size:0.85rem;opacity:0.9;">
+      Non connecté
+    </span>
+    <button id="btn-logout" class="btn btn-secondary hidden"
+            style="padding:4px 10px;font-size:0.8rem;">
+      Déconnexion
+    </button>
+  </div>
 </header>
 
 <main>
 
-  <!-- Bandeau d'intro -->
-  <section class="hero">
+  <!-- PAGE DE CONNEXION -->
+  <section id="section-login" class="hero">
     <h2>Bienvenue sur Exam-GU</h2>
-    <p>Choisissez votre rôle pour accéder aux fonctionnalités :</p>
-    <div class="roles">
-      <button class="role-btn active" data-role="etudiant">Je suis un étudiant</button>
-      <button class="role-btn" data-role="enseignant">Je suis un enseignant</button>
-      <button class="role-btn" data-role="admin">Je suis un administrateur</button>
+    <p>Connectez-vous pour accéder à votre espace :</p>
+
+    <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+      <select id="login-role">
+        <option value="etudiant">Étudiant</option>
+        <option value="enseignant">Enseignant</option>
+        <option value="admin">Administrateur</option>
+      </select>
+
+      <input id="login-id"
+             type="text"
+             placeholder="Identifiant (ex: ETU-0001, ENS-0001, ADM-0001)"
+             style="padding:6px 8px;border-radius:6px;border:1px solid #ccc;min-width:220px;">
+
+      <button class="btn btn-primary" id="btn-login">
+        Se connecter
+      </button>
     </div>
-    <p style="margin-top:12px;font-size:0.85rem;color:#555;">
-      <strong>Note :</strong> pour le moment, l’authentification est simulée avec des identifiants de test
-      (<code>ETU-0001</code>, <code>ENS-0001</code>, <code>ADM-0001</code>).
-      Plus tard, on pourra remplacer cela par une vraie connexion.
+
+    <p style="margin-top:8px;font-size:0.85rem;color:#555;">
+      <strong>Note :</strong> l’authentification est simulée
+      via l’en-tête <code>X-User-Id</code>. Utilisez les codes que vous avez créés
+      (ETU-0001, ENS-0001, ADM-0001, etc.).
     </p>
+
+    <div id="login-status" class="status"></div>
   </section>
 
-  <!-- SECTION ÉTUDIANT -->
-  <section id="section-etudiant" class="card">
+  <!-- VUE ÉTUDIANT -->
+  <section id="section-etudiant" class="card hidden">
     <h3>Vue Étudiant</h3>
-    <small>Utilisateur simulé : <code id="etu-user-id">ETU-0001</code></small>
+    <small>Connecté comme : <code id="etu-user-id"></code></small>
 
     <div style="margin-top:10px;">
       <button class="btn btn-primary" id="btn-load-student-exams">
@@ -282,10 +300,15 @@
 
     <div id="student-status" class="status"></div>
 
-    <!-- Tableau des examens accessibles -->
+    <!-- Liste des examens -->
     <div id="student-exams-container"></div>
 
-    <!-- Zone d’examen en cours (questions + réponses) -->
+    <!-- Copies corrigées -->
+    <h4 style="margin-top:20px;">Mes copies corrigées</h4>
+    <div id="student-copies-status" class="status"></div>
+    <div id="student-copies-container" style="margin-top:6px;"></div>
+
+    <!-- Examen en cours -->
     <div id="student-exam-area" class="hidden" style="margin-top:20px;">
       <div class="exam-meta" id="student-current-exam-title"></div>
       <div class="exam-meta" id="student-current-exam-timer"></div>
@@ -300,10 +323,10 @@
     </div>
   </section>
 
-  <!-- SECTION ENSEIGNANT -->
+  <!-- VUE ENSEIGNANT -->
   <section id="section-enseignant" class="card hidden">
     <h3>Vue Enseignant</h3>
-    <small>Utilisateur simulé : <code id="ens-user-id">ENS-0001</code></small>
+    <small>Connecté comme : <code id="ens-user-id"></code></small>
 
     <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
       <button class="btn btn-primary" id="btn-load-teacher-exams">
@@ -324,7 +347,7 @@
 
     <div id="teacher-exams-container"></div>
 
-    <!-- ÉDITEUR D'EXAMEN (ENSEIGNANT) -->
+    <!-- ÉDITEUR D’EXAMEN -->
     <div id="teacher-editor" class="card hidden" style="margin-top:16px;">
       <h4 id="teacher-editor-title">Édition d'un examen</h4>
 
@@ -333,7 +356,7 @@
         <span id="teacher-editor-code"></span>
       </div>
 
-      <!-- Paramètres d'ouverture de l'examen -->
+      <!-- Paramètres d'ouverture -->
       <div style="margin-bottom:12px;">
         <div style="margin-bottom:6px;">
           <label for="exam-start-datetime"><strong>Date et heure de début :</strong></label><br>
@@ -355,7 +378,7 @@
 
       <hr>
 
-      <!-- Formulaire d'ajout de question -->
+      <!-- Ajout de question -->
       <h5 style="margin-top:0;">Ajouter une question</h5>
 
       <div style="margin-bottom:8px;">
@@ -377,7 +400,7 @@
         <input type="number" id="question-bareme" min="0.5" step="0.5" value="1" style="width:80px;">
       </div>
 
-      <!-- Zone spécifique aux QCM -->
+      <!-- Zone QCM -->
       <div id="question-qcm-zone" style="margin-bottom:10px;">
         <p style="margin:4px 0;"><strong>Choix de réponse (QCM)</strong></p>
         <div id="question-qcm-choices"></div>
@@ -399,12 +422,39 @@
       <div id="teacher-questions-list" style="font-size:0.9rem;"></div>
     </div>
 
+    <!-- COPIES & CORRECTION -->
+    <div id="teacher-copies-panel" class="card hidden" style="margin-top:16px;">
+      <h4>Copies d'examen</h4>
+      <div id="teacher-copies-info" style="font-size:0.9rem;margin-bottom:8px;">
+        Sélectionnez un examen puis cliquez sur <em>Copies</em> pour voir les copies remises.
+      </div>
+
+      <table>
+        <thead>
+        <tr>
+          <th>Étudiant</th>
+          <th>Note auto</th>
+          <th>Note totale</th>
+          <th>Statut</th>
+          <th>Début</th>
+          <th>Fin</th>
+          <th>Action</th>
+        </tr>
+        </thead>
+        <tbody id="enseignant-copies-body">
+        </tbody>
+      </table>
+
+      <h4 id="copie-header" style="margin-top:16px;">Détail de la copie sélectionnée</h4>
+      <p id="copie-note-info" style="font-size:0.9rem;color:#333;"></p>
+      <div id="copie-detail"></div>
+    </div>
   </section>
 
-  <!-- SECTION ADMIN -->
+  <!-- VUE ADMIN -->
   <section id="section-admin" class="card hidden">
     <h3>Vue Administrateur</h3>
-    <small>Utilisateur simulé : <code id="admin-user-id">ADM-0001</code></small>
+    <small>Connecté comme : <code id="admin-user-id"></code></small>
 
     <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px;">
       <button class="btn btn-primary" id="btn-load-admin-exams">
@@ -414,56 +464,164 @@
       <button class="btn btn-secondary" id="btn-load-admin-students">
         Charger la liste des étudiants
       </button>
+
+      <button class="btn btn-secondary" id="btn-load-admin-teachers">
+        Charger la liste des enseignants
+      </button>
     </div>
 
     <div id="admin-status" class="status"></div>
 
     <div id="admin-students-container" style="margin-top:12px;"></div>
-
+    <div id="admin-teachers-container" style="margin-top:12px;"></div>
     <div id="admin-exams-container" style="margin-top:12px;"></div>
+
+    <!-- Gestion des utilisateurs -->
+    <div style="margin-top:24px;">
+      <h4>Gestion des utilisateurs</h4>
+
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+        <select id="admin-user-role">
+          <option value="ETUDIANT">Étudiant</option>
+          <option value="ENSEIGNANT">Enseignant</option>
+          <option value="ADMIN">Administrateur</option>
+        </select>
+
+        <input id="admin-user-prenom" type="text" placeholder="Prénom"
+               style="padding:6px 8px;border-radius:6px;border:1px solid #ccc;min-width:120px;">
+        <input id="admin-user-nom" type="text" placeholder="Nom"
+               style="padding:6px 8px;border-radius:6px;border:1px solid #ccc;min-width:120px;">
+        <input id="admin-user-email" type="email" placeholder="Email UQAC"
+               style="padding:6px 8px;border-radius:6px;border:1px solid #ccc;min-width:200px;">
+        <input id="admin-user-departement" type="text" placeholder="Département (ex. GEI)"
+               style="padding:6px 8px;border-radius:6px;border:1px solid #ccc;min-width:120px;">
+        <input id="admin-user-password" type="text" placeholder="Mot de passe initial"
+               style="padding:6px 8px;border-radius:6px;border:1px solid #ccc;min-width:150px;">
+        <input id="admin-user-naissance" type="date"
+               style="padding:6px 8px;border-radius:6px;border:1px solid #ccc;">
+        <!-- Code permanent (spécial étudiant) -->
+        <input id="admin-user-code-permanent" type="text" placeholder="Code permanent (étudiant)"
+               style="padding:6px 8px;border-radius:6px;border:1px solid #ccc;min-width:140px;">
+      </div>
+
+      <div style="margin-top:8px;">
+        <button class="btn btn-secondary" id="btn-admin-create-user">Créer l'utilisateur</button>
+      </div>
+
+      <div id="admin-user-status" class="status"></div>
+    </div>
   </section>
 
 </main>
 
 <script>
-  // === CONFIG SIMPLIFIÉE DES UTILISATEURS DE TEST ===
+  // ============================================================
+  // CONFIG SESSION & UTILISATEURS
+  // ============================================================
   const USERS = {
     etudiant: { id: "ETU-0001" },
     enseignant: { id: "ENS-0001" },
     admin: { id: "ADM-0001" }
   };
 
-  let currentRole = "etudiant";
-  let currentAttempt = null;        // tentative côté étudiant
-  let currentEditedExamCode = null; // examen en cours d'édition côté enseignant
-  let adminStudents = [];           // étudiants connus de l'admin
+  let currentRole = null;
+  let currentAttempt = null;
+  let currentEditedExamCode = null;
+  let adminStudents = [];
+  let currentExamCodeForCopies = null;
+  let currentExamTitleForCopies = null;
 
-  // === GESTION DU CHANGEMENT DE RÔLE =============================
-  function switchRole(role) {
-    currentRole = role;
-
-    document.querySelectorAll(".role-btn").forEach(btn => {
-      btn.classList.toggle("active", btn.dataset.role === role);
-    });
-
-    document.getElementById("section-etudiant").classList.add("hidden");
-    document.getElementById("section-enseignant").classList.add("hidden");
-    document.getElementById("section-admin").classList.add("hidden");
-
-    if (role === "etudiant") {
-      document.getElementById("section-etudiant").classList.remove("hidden");
-    } else if (role === "enseignant") {
-      document.getElementById("section-enseignant").classList.remove("hidden");
-    } else if (role === "admin") {
-      document.getElementById("section-admin").classList.remove("hidden");
+  function setHeaderSession(text, showLogout) {
+    const span = document.getElementById("header-session");
+    const btn = document.getElementById("btn-logout");
+    span.textContent = text;
+    if (showLogout) {
+      btn.classList.remove("hidden");
+    } else {
+      btn.classList.add("hidden");
     }
   }
 
-  document.querySelectorAll(".role-btn").forEach(btn => {
-    btn.addEventListener("click", () => switchRole(btn.dataset.role));
-  });
+  function showOnlySection(sectionId) {
+    document.getElementById("section-login").classList.add("hidden");
+    document.getElementById("section-etudiant").classList.add("hidden");
+    document.getElementById("section-enseignant").classList.add("hidden");
+    document.getElementById("section-admin").classList.add("hidden");
+    document.getElementById(sectionId).classList.remove("hidden");
+  }
 
-  // === ADMIN – CHARGER LES ÉTUDIANTS =============================
+  function updateUserLabels() {
+    const etu = document.getElementById("etu-user-id");
+    const ens = document.getElementById("ens-user-id");
+    const adm = document.getElementById("admin-user-id");
+    if (etu) etu.textContent = USERS.etudiant.id;
+    if (ens) ens.textContent = USERS.enseignant.id;
+    if (adm) adm.textContent = USERS.admin.id;
+  }
+
+  // ============================================================
+  // CONNEXION / DÉCONNEXION
+  // ============================================================
+  function roleLabel(role) {
+    if (role === "etudiant") return "Étudiant";
+    if (role === "enseignant") return "Enseignant";
+    if (role === "admin") return "Administrateur";
+    return role;
+  }
+
+  function handleLogin() {
+    const role = document.getElementById("login-role").value;
+    const idInput = document.getElementById("login-id");
+    const ident = idInput.value.trim();
+    const status = document.getElementById("login-status");
+
+    status.className = "status";
+
+    if (!ident) {
+      status.textContent = "Veuillez saisir un identifiant (ex. ETU-0001).";
+      status.classList.add("error");
+      return;
+    }
+
+    if (role === "etudiant") {
+      USERS.etudiant.id = ident;
+    } else if (role === "enseignant") {
+      USERS.enseignant.id = ident;
+    } else if (role === "admin") {
+      USERS.admin.id = ident;
+    }
+
+    currentRole = role;
+    updateUserLabels();
+
+    setHeaderSession(`Connecté comme ${ident} (${roleLabel(role)})`, true);
+
+    if (role === "etudiant") {
+      showOnlySection("section-etudiant");
+    } else if (role === "enseignant") {
+      showOnlySection("section-enseignant");
+    } else if (role === "admin") {
+      showOnlySection("section-admin");
+    }
+
+    status.textContent = "";
+    idInput.value = "";
+  }
+
+  function handleLogout() {
+    currentRole = null;
+    currentAttempt = null;
+    currentEditedExamCode = null;
+    setHeaderSession("Non connecté", false);
+    showOnlySection("section-login");
+  }
+
+  document.getElementById("btn-login").addEventListener("click", handleLogin);
+  document.getElementById("btn-logout").addEventListener("click", handleLogout);
+
+  // ============================================================
+  // ADMIN – LISTES & INSCRIPTION
+  // ============================================================
   async function loadAdminStudents() {
     const status = document.getElementById("admin-status");
     const container = document.getElementById("admin-students-container");
@@ -478,7 +636,8 @@
       });
 
       if (!resp.ok) {
-        throw new Error("HTTP " + resp.status);
+        const txt = await resp.text();
+        throw new Error("HTTP " + resp.status + " – " + txt);
       }
 
       const data = await resp.json();
@@ -498,6 +657,7 @@
           <thead>
             <tr>
               <th>Code</th>
+              <th>Nom</th>
               <th>Email</th>
               <th>Code permanent</th>
             </tr>
@@ -506,9 +666,13 @@
       `;
 
       for (const etu of adminStudents) {
+        const nom = etu.nomComplet ||
+          [etu.prenom, etu.nom].filter(Boolean).join(" ") ||
+          etu.nom || "";
         html += `
           <tr>
             <td>${etu.code || ""}</td>
+            <td>${nom}</td>
             <td>${etu.email || ""}</td>
             <td>${etu.codePermanent || ""}</td>
           </tr>
@@ -520,7 +684,7 @@
 
     } catch (err) {
       console.error(err);
-      status.textContent = "Erreur lors du chargement des étudiants.";
+      status.textContent = "Erreur lors du chargement des étudiants : " + err.message;
       status.classList.add("error");
       container.innerHTML = "";
       adminStudents = [];
@@ -530,7 +694,77 @@
   document.getElementById("btn-load-admin-students")
     .addEventListener("click", loadAdminStudents);
 
-  // === ADMIN – CHARGER LES EXAMENS + INSCRIPTIONS ================
+  async function loadAdminTeachers() {
+    const status = document.getElementById("admin-status");
+    const container = document.getElementById("admin-teachers-container");
+
+    status.textContent = "Chargement des enseignants...";
+    status.className = "status";
+    container.innerHTML = "";
+
+    try {
+      const resp = await fetch("/api/admin/enseignants", {
+        headers: { "X-User-Id": USERS.admin.id }
+      });
+
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error("HTTP " + resp.status + " – " + txt);
+      }
+
+      const data = await resp.json();
+      const enseignants = Array.isArray(data) ? data : [];
+
+      status.textContent = `OK – ${enseignants.length} enseignant(s) chargé(s).`;
+      status.classList.add("ok");
+
+      if (enseignants.length === 0) {
+        container.innerHTML = "<p>Aucun enseignant trouvé.</p>";
+        return;
+      }
+
+      let html = `
+        <h4>Enseignants</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Nom</th>
+              <th>Email</th>
+              <th>Département</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (const ens of enseignants) {
+        const nom = ens.nomComplet ||
+          [ens.prenom, ens.nom].filter(Boolean).join(" ") ||
+          ens.nom || "";
+        html += `
+          <tr>
+            <td>${ens.code || ""}</td>
+            <td>${nom}</td>
+            <td>${ens.email || ""}</td>
+            <td>${ens.departement || ""}</td>
+          </tr>
+        `;
+      }
+
+      html += "</tbody></table>";
+      container.innerHTML = html;
+
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Erreur lors du chargement des enseignants : " + err.message;
+      status.classList.add("error");
+      container.innerHTML = "";
+    }
+  }
+
+  document.getElementById("btn-load-admin-teachers")
+    .addEventListener("click", loadAdminTeachers);
+
   async function loadAdminExams() {
     const status = document.getElementById("admin-status");
     const container = document.getElementById("admin-exams-container");
@@ -540,13 +774,12 @@
 
     try {
       const resp = await fetch("/api/admin/examens", {
-        headers: {
-          "X-User-Id": USERS.admin.id
-        }
+        headers: { "X-User-Id": USERS.admin.id }
       });
 
       if (!resp.ok) {
-        throw new Error("HTTP " + resp.status);
+        const txt = await resp.text();
+        throw new Error("HTTP " + resp.status + " – " + txt);
       }
 
       const exams = await resp.json();
@@ -616,7 +849,7 @@
 
     } catch (err) {
       console.error(err);
-      status.textContent = "Erreur lors du chargement des examens admin.";
+      status.textContent = "Erreur lors du chargement des examens admin : " + err.message;
       status.classList.add("error");
       container.innerHTML = "";
     }
@@ -662,14 +895,128 @@
 
     } catch (err) {
       console.error(err);
-      status.textContent = "Erreur lors de l'inscription de l'étudiant.";
+      status.textContent = "Erreur lors de l'inscription de l'étudiant : " + err.message;
       status.classList.add("error");
     }
   }
 
   window.enrollStudentToExam = enrollStudentToExam;
 
-  // === PARTIE ÉTUDIANT ===========================================
+  // ============================================================
+  // ADMIN – CRÉATION D’UN UTILISATEUR
+  // ============================================================
+  async function adminCreateUser() {
+    const status = document.getElementById("admin-user-status");
+
+    const role = document.getElementById("admin-user-role").value;
+    const prenom = (document.getElementById("admin-user-prenom").value || "").trim();
+    const nom = (document.getElementById("admin-user-nom").value || "").trim();
+    const email = (document.getElementById("admin-user-email").value || "").trim();
+    const departement = (document.getElementById("admin-user-departement").value || "").trim() || "GEI";
+    const motDePasse = (document.getElementById("admin-user-password").value || "").trim() || "changeme";
+    const dateNaissanceStr = document.getElementById("admin-user-naissance").value || null;
+    const codePermanent = (document.getElementById("admin-user-code-permanent").value || "").trim();
+
+    status.className = "status";
+
+    if (!prenom || !nom || !email) {
+      status.textContent = "Prénom, nom et email sont obligatoires.";
+      status.classList.add("error");
+      return;
+    }
+
+    // IMPORTANT : ne pas envoyer dateNaissance pour ENSEIGNANT/ADMIN
+    const body = {
+      email: email,
+      motDePasse: motDePasse,
+      prenom: prenom,
+      nom: nom,
+      departement: departement,
+      role: role
+    };
+
+    if (role === "ETUDIANT") {
+      if (dateNaissanceStr) {
+        body.dateNaissance = dateNaissanceStr;
+      }
+      if (codePermanent) {
+        body.codePermanent = codePermanent;
+      }
+    }
+
+    status.textContent = "Création de l'utilisateur...";
+    try {
+      const resp = await fetch("/api/admin/utilisateurs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Id": USERS.admin.id
+        },
+        body: JSON.stringify(body)
+      });
+
+      const txt = await resp.text();
+
+      if (!resp.ok) {
+        console.error("Erreur création utilisateur:", txt);
+        status.textContent = "Erreur lors de la création de l'utilisateur : " + txt;
+        status.classList.add("error");
+        return;
+      }
+
+      let created = null;
+      try { created = JSON.parse(txt); } catch {}
+
+      status.textContent =
+        "Utilisateur créé : " +
+        (created && created.code ? created.code + " – " + created.email : email);
+      status.classList.add("ok");
+
+      if (role === "ETUDIANT") {
+        await loadAdminStudents();
+      } else if (role === "ENSEIGNANT") {
+        await loadAdminTeachers();
+      }
+
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Erreur réseau lors de la création de l'utilisateur.";
+      status.classList.add("error");
+    }
+  }
+
+  document.getElementById("btn-admin-create-user")
+    .addEventListener("click", adminCreateUser);
+
+  // ============================================================
+  // ÉTUDIANT – LISTE DES EXAMENS & NOTES
+  // ============================================================
+  async function loadExamNoteForStudent(examCode, safeId) {
+    if (!examCode) return;
+    const cell = document.getElementById("exam-note-" + safeId);
+    if (!cell) return;
+
+    try {
+      const resp = await fetch(`/api/etudiants/examens/${examCode}/note`, {
+        headers: { "X-User-Id": USERS.etudiant.id }
+      });
+
+      if (!resp.ok) {
+        cell.textContent = "-";
+        return;
+      }
+
+      const noteDetail = await resp.json();
+      const total = noteDetail.total ?? noteDetail.noteTotale ?? noteDetail.note ?? 0;
+      const denom = noteDetail.totalPoints ?? noteDetail.noteMax ?? "";
+      cell.textContent = denom ? `${total} / ${denom}` : `${total}`;
+    } catch (err) {
+      console.error(err);
+      const c2 = document.getElementById("exam-note-" + safeId);
+      if (c2) c2.textContent = "-";
+    }
+  }
+
   async function loadStudentExams() {
     const status = document.getElementById("student-status");
     const container = document.getElementById("student-exams-container");
@@ -682,13 +1029,12 @@
 
     try {
       const resp = await fetch("/api/etudiants/examens", {
-        headers: {
-          "X-User-Id": USERS.etudiant.id
-        }
+        headers: { "X-User-Id": USERS.etudiant.id }
       });
 
       if (!resp.ok) {
-        throw new Error("HTTP " + resp.status);
+        const txt = await resp.text();
+        throw new Error("HTTP " + resp.status + " – " + txt);
       }
 
       const exams = await resp.json();
@@ -697,57 +1043,182 @@
 
       if (!Array.isArray(exams) || exams.length === 0) {
         container.innerHTML = "<p>Aucun examen disponible pour cet étudiant.</p>";
+      } else {
+        const examNoteCells = [];
+
+        let html = `
+          <table>
+            <thead>
+              <tr>
+                <th>Examen ID</th>
+                <th>Code</th>
+                <th>Titre</th>
+                <th>État</th>
+                <th>Note</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        exams.forEach((ex, index) => {
+          const etat = ex.etat || ex.status || "N/A";
+          const code = ex.code || ex.examenCode || "";
+          const safeId = code
+            ? code.replace(/[^a-zA-Z0-9_-]/g, "_")
+            : ("ex_" + index);
+
+          // 1) Essayer de lire la note directement dans l'objet examen
+          const rawNote = ex.note ?? ex.noteTotale ?? ex.noteFinale ?? ex.total ?? null;
+          const rawMax = ex.totalPoints ?? ex.noteMax ?? null;
+          let noteDisplay = "-";
+
+          if (rawNote != null) {
+            noteDisplay = rawMax != null ? `${rawNote} / ${rawMax}` : `${rawNote}`;
+          } else {
+            // 2) Sinon, on tentera ensuite l’endpoint /note
+            examNoteCells.push({ code, safeId });
+          }
+
+          html += `
+            <tr>
+              <td>${ex.id || ex.examenId || ""}</td>
+              <td>${code}</td>
+              <td>${ex.titre || ex.titreExamen || ""}</td>
+              <td><span class="tag tag-ouvert">${etat}</span></td>
+              <td id="exam-note-${safeId}">${noteDisplay}</td>
+              <td>
+                <button class="btn btn-secondary"
+                        onclick="startExamAttempt('${code}')">
+                  Démarrer
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+
+        html += "</tbody></table>";
+        container.innerHTML = html;
+
+        // Charger les notes uniquement pour les examens où on n'avait rien dans l'objet
+        examNoteCells.forEach(e => loadExamNoteForStudent(e.code, e.safeId));
+      }
+
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Erreur lors du chargement des examens : " + err.message;
+      status.classList.add("error");
+      container.innerHTML = "";
+    }
+  }
+
+  async function loadStudentCorrectedCopies() {
+    const status = document.getElementById("student-copies-status");
+    const container = document.getElementById("student-copies-container");
+
+    status.textContent = "Chargement de vos copies corrigées...";
+    status.className = "status";
+    container.innerHTML = "";
+
+    try {
+      const examsResp = await fetch("/api/etudiants/examens", {
+        headers: { "X-User-Id": USERS.etudiant.id }
+      });
+      if (!examsResp.ok) {
+        const txt = await examsResp.text();
+        throw new Error("HTTP " + examsResp.status + " – " + txt);
+      }
+      const exams = await examsResp.json();
+
+      const notesDetaillees = [];
+
+      for (const ex of exams) {
+        const code = ex.code || ex.examenCode || "";
+        if (!code) continue;
+
+        try {
+          const noteResp = await fetch(`/api/etudiants/examens/${code}/note`, {
+            headers: { "X-User-Id": USERS.etudiant.id }
+          });
+
+          if (!noteResp.ok) {
+            continue;
+          }
+
+          const noteDetail = await noteResp.json();
+          notesDetaillees.push(noteDetail);
+        } catch (e) {
+          console.error("Erreur sur l'examen", code, e);
+        }
+      }
+
+      if (notesDetaillees.length === 0) {
+        status.textContent =
+          "Aucune copie corrigée disponible pour le moment (soit pas de tentative, soit notes non publiées).";
+        status.classList.add("ok");
         return;
       }
 
-      let html = `
-        <table>
-          <thead>
-            <tr>
-              <th>Examen ID</th>
-              <th>Code</th>
-              <th>Titre</th>
-              <th>État</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
+      status.textContent = `OK – ${notesDetaillees.length} copie(s) corrigée(s).`;
+      status.classList.add("ok");
 
-      for (const ex of exams) {
-        const etat = ex.etat || ex.status || "N/A";
-        const code = ex.code || ex.examenCode || "";
+      let html = "";
+      for (const n of notesDetaillees) {
         html += `
-          <tr>
-            <td>${ex.id || ex.examenId || ""}</td>
-            <td>${code}</td>
-            <td>${ex.titre || ex.titreExamen || ""}</td>
-            <td><span class="tag tag-ouvert">${etat}</span></td>
-            <td>
-              <button class="btn btn-secondary"
-                      onclick="startExamAttempt('${code}')">
-                Démarrer
-              </button>
-            </td>
-          </tr>
+          <div class="card" style="margin-top:10px;">
+            <h4>${n.examenCode} – ${n.examenTitre}</h4>
+            <p><strong>Note totale :</strong> ${n.total} / ${n.totalPoints}</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Question</th>
+                  <th>Réponse</th>
+                  <th>Note / Barème</th>
+                  <th>Commentaire</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        if (Array.isArray(n.questions)) {
+          for (const q of n.questions) {
+            html += `
+              <tr>
+                <td>${q.enonce}</td>
+                <td>${q.reponse}</td>
+                <td>${q.note} / ${q.bareme}</td>
+                <td>${q.commentaire || ""}</td>
+              </tr>
+            `;
+          }
+        }
+
+        html += `
+              </tbody>
+            </table>
+          </div>
         `;
       }
 
-      html += "</tbody></table>";
       container.innerHTML = html;
 
     } catch (err) {
       console.error(err);
-      status.textContent = "Erreur lors du chargement des examens.";
+      status.textContent = "Impossible de charger vos copies : " + err.message;
       status.classList.add("error");
       container.innerHTML = "";
     }
   }
 
   document.getElementById("btn-load-student-exams")
-    .addEventListener("click", loadStudentExams);
+    .addEventListener("click", async () => {
+      await loadStudentExams();
+      await loadStudentCorrectedCopies();
+    });
 
-  // Démarrer une tentative pour un examen (étudiant)
+  // ============================================================
+  // ÉTUDIANT – TENTATIVE & QUESTIONS
+  // ============================================================
   async function startExamAttempt(examCode) {
     const status = document.getElementById("student-status");
     const examArea = document.getElementById("student-exam-area");
@@ -772,7 +1243,8 @@
       });
 
       if (!resp.ok) {
-        throw new Error("HTTP " + resp.status);
+        const txt = await resp.text();
+        throw new Error("HTTP " + resp.status + " – " + txt);
       }
 
       const t = await resp.json();
@@ -803,14 +1275,13 @@
 
       examArea.classList.remove("hidden");
 
-      // Charger les questions de la tentative
       if (currentAttempt.tentativeId) {
         await loadQuestionsForAttempt(currentAttempt.tentativeId);
       }
 
     } catch (err) {
       console.error(err);
-      status.textContent = "Erreur lors de la création de la tentative.";
+      status.textContent = "Erreur lors de la création de la tentative : " + err.message;
       status.classList.add("error");
       currentAttempt = null;
     }
@@ -818,7 +1289,6 @@
 
   window.startExamAttempt = startExamAttempt;
 
-  // Charger les questions de la tentative
   async function loadQuestionsForAttempt(tentativeId) {
     const status = document.getElementById("student-status");
     const questionsContainer = document.getElementById("student-questions-container");
@@ -829,13 +1299,12 @@
 
     try {
       const resp = await fetch(`/api/etudiants/tentatives/${tentativeId}/questions`, {
-        headers: {
-          "X-User-Id": USERS.etudiant.id
-        }
+        headers: { "X-User-Id": USERS.etudiant.id }
       });
 
       if (!resp.ok) {
-        throw new Error("HTTP " + resp.status);
+        const txt = await resp.text();
+        throw new Error("HTTP " + resp.status + " – " + txt);
       }
 
       const questions = await resp.json();
@@ -853,7 +1322,7 @@
 
     } catch (err) {
       console.error(err);
-      status.textContent = "Erreur lors du chargement des questions.";
+      status.textContent = "Erreur lors du chargement des questions : " + err.message;
       status.classList.add("error");
       questionsContainer.innerHTML = "";
     }
@@ -875,7 +1344,7 @@
       if (type === "QCM" && Array.isArray(q.choix)) {
         inner += `<div class="question-choices">`;
         q.choix.forEach((choice, idx) => {
-          const lettre = String.fromCharCode(97 + idx); // a, b, c, d...
+          const lettre = String.fromCharCode(97 + idx);
           inner += `
             <label>
               <input type="radio"
@@ -905,7 +1374,6 @@
     });
   }
 
-  // Soumettre les réponses de l’étudiant
   async function submitStudentAnswers() {
     const status = document.getElementById("student-status");
 
@@ -965,6 +1433,7 @@
 
       if (!resp.ok) {
         const txt = await resp.text();
+        console.error("Erreur soumission:", txt);
         throw new Error("HTTP " + resp.status + " – " + txt);
       }
 
@@ -973,7 +1442,7 @@
 
     } catch (err) {
       console.error(err);
-      status.textContent = "Erreur lors de la soumission des réponses.";
+      status.textContent = "Erreur lors de la soumission des réponses : " + err.message;
       status.classList.add("error");
     }
   }
@@ -981,14 +1450,15 @@
   document.getElementById("btn-submit-answers")
     .addEventListener("click", submitStudentAnswers);
 
-  // === PARTIE ENSEIGNANT =========================================
+  // ============================================================
+  // ENSEIGNANT – ÉDITEUR & EXAMENS
+  // ============================================================
   function initQuestionEditor() {
     const typeSelect = document.getElementById("question-type");
     const qcmZone = document.getElementById("question-qcm-zone");
 
     typeSelect.addEventListener("change", () => {
-      const isQcm = typeSelect.value === "QCM";
-      qcmZone.style.display = isQcm ? "block" : "none";
+      qcmZone.style.display = (typeSelect.value === "QCM") ? "block" : "none";
     });
 
     const choiceContainer = document.getElementById("question-qcm-choices");
@@ -1007,7 +1477,6 @@
       choiceContainer.appendChild(div);
     }
 
-    // 4 choix par défaut
     choiceContainer.innerHTML = "";
     addChoiceRow("Choix 1");
     addChoiceRow("Choix 2");
@@ -1036,13 +1505,12 @@
 
     try {
       const resp = await fetch("/api/enseignants/examens", {
-        headers: {
-          "X-User-Id": USERS.enseignant.id
-        }
+        headers: { "X-User-Id": USERS.enseignant.id }
       });
 
       if (!resp.ok) {
-        throw new Error("HTTP " + resp.status);
+        const txt = await resp.text();
+        throw new Error("HTTP " + resp.status + " – " + txt);
       }
 
       const exams = await resp.json();
@@ -1079,7 +1547,13 @@
                   data-exam-titre="${titre}">
             Éditer
           </button>
-        `;
+          <button class="btn btn-secondary teacher-copies-btn"
+                  data-exam-code="${code}"
+                  data-exam-titre="${titre}"
+                  style="margin-left:4px;">
+            Copies
+          </button>
+       `;
 
         html += `
           <tr>
@@ -1103,9 +1577,17 @@
         });
       });
 
+      container.querySelectorAll(".teacher-copies-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const code = btn.dataset.examCode;
+          const titre = btn.dataset.examTitre;
+          loadCopies(code, titre);
+        });
+      });
+
     } catch (err) {
       console.error(err);
-      status.textContent = "Erreur lors du chargement des examens enseignant.";
+      status.textContent = "Erreur lors du chargement des examens enseignant : " + err.message;
       status.classList.add("error");
       container.innerHTML = "";
     }
@@ -1140,6 +1622,7 @@
 
       if (!resp.ok) {
         const txt = await resp.text();
+        console.error("Erreur création examen:", txt);
         throw new Error("HTTP " + resp.status + " – " + txt);
       }
 
@@ -1153,7 +1636,7 @@
 
     } catch (err) {
       console.error(err);
-      status.textContent = "Erreur lors de la création de l'examen.";
+      status.textContent = "Erreur lors de la création de l'examen : " + err.message;
       status.className = "status error";
     }
   }
@@ -1258,7 +1741,7 @@
       }
 
       indicesCorrects = [];
-      let idxVisible = 1;
+      let idxVisible = 0;
       for (let i = 0; i < choiceInputs.length; i++) {
         const val = choiceInputs[i].value.trim();
         if (!val) continue;
@@ -1278,7 +1761,7 @@
     const payload = {
       enonce: enonce,
       bareme: bareme,
-      type: type,                  // "QCM", "COURTE", "LONGUE", etc.
+      type: type,
       choix: choix,
       indicesCorrects: indicesCorrects,
       bonneReponseVraiFaux: bonneReponseVraiFaux
@@ -1299,6 +1782,7 @@
 
       if (!resp.ok) {
         const txt = await resp.text();
+        console.error("Erreur ajout question:", txt);
         throw new Error("HTTP " + resp.status + " – " + txt);
       }
 
@@ -1311,7 +1795,7 @@
 
     } catch (err) {
       console.error(err);
-      status.textContent = "Erreur lors de l'ajout de la question.";
+      status.textContent = "Erreur lors de l'ajout de la question : " + err.message;
       status.className = "status error";
     }
   }
@@ -1352,12 +1836,13 @@
         body: JSON.stringify({
           dureeMinutes: duree,
           fenetreMinutes: fenetre,
-          dateDebut: startStr   // optionnel selon backend
+          dateDebut: startStr
         })
       });
 
       if (!resp.ok) {
         const txt = await resp.text();
+        console.error("Erreur ouverture examen:", txt);
         throw new Error("HTTP " + resp.status + " – " + txt);
       }
 
@@ -1368,14 +1853,217 @@
 
     } catch (err) {
       console.error(err);
-      status.textContent = "Erreur lors de l'ouverture de l'examen.";
+      status.textContent = "Erreur lors de l'ouverture de l'examen : " + err.message;
       status.className = "status error";
     }
   }
 
-  // === INITIALISATION ============================================
+  // ============================================================
+  // ENSEIGNANT – COPIES & CORRECTION
+  // ============================================================
+  async function loadCopies(examCode, examTitre) {
+    const panel = document.getElementById("teacher-copies-panel");
+    const info = document.getElementById("teacher-copies-info");
+    const tbody = document.getElementById("enseignant-copies-body");
+
+    currentExamCodeForCopies = examCode;
+    currentExamTitleForCopies = examTitre;
+
+    info.textContent = `Copies pour l'examen ${examCode} – ${examTitre || ""}`;
+    tbody.innerHTML = "";
+    panel.classList.remove("hidden");
+
+    try {
+      const res = await fetch(`/api/enseignants/examens/${examCode}/copies`, {
+        headers: { "X-User-Id": USERS.enseignant.id }
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        alert("Erreur chargement copies : " + txt);
+        return;
+      }
+
+      const copies = await res.json();
+      if (!Array.isArray(copies) || copies.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7">Aucune copie pour cet examen.</td></tr>`;
+        return;
+      }
+
+      copies.forEach(c => {
+        const tr = document.createElement("tr");
+
+        const statut = c.soumise ? "Soumise" : "En cours";
+        const dateDebut = c.debut || "";
+        const dateFin = c.fin || "";
+
+        const noteAuto = c.noteAuto ?? c.noteAutomatique ?? 0;
+        const noteTotale = c.noteTotale ?? c.noteFinale ?? noteAuto;
+
+        tr.innerHTML = `
+          <td>${c.etudiantCode || ""} – ${c.etudiantNom || ""}</td>
+          <td>${noteAuto}</td>
+          <td>${noteTotale}</td>
+          <td>${statut}</td>
+          <td>${dateDebut}</td>
+          <td>${dateFin}</td>
+          <td>
+            <button class="btn btn-secondary teacher-copie-detail-btn"
+                    data-tid="${c.tentativeId}">
+              Corriger
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll(".teacher-copie-detail-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const tid = btn.dataset.tid;
+          loadCopieDetail(tid);
+        });
+      });
+
+    } catch (err) {
+      console.error(err);
+      alert("Erreur réseau lors du chargement des copies.");
+    }
+  }
+
+  async function loadCopieDetail(tentativeId) {
+    const header = document.getElementById("copie-header");
+    const noteInfo = document.getElementById("copie-note-info");
+    const container = document.getElementById("copie-detail");
+
+    header.textContent = "Détail de la copie";
+    noteInfo.textContent = "";
+    container.innerHTML = "";
+
+    try {
+      const res = await fetch(`/api/enseignants/tentatives/${tentativeId}`, {
+        headers: { "X-User-Id": USERS.enseignant.id }
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        alert("Erreur chargement détail copie : " + txt);
+        return;
+      }
+
+      const detail = await res.json();
+
+      const noteAuto = detail.noteAuto ?? detail.noteAutomatique ?? 0;
+      const noteTotale = detail.noteTotale ?? detail.noteFinale ?? noteAuto;
+
+      header.textContent =
+        `Copie de ${detail.etudiantNom} (${detail.etudiantCode}) – Examen ${detail.examenCode}`;
+      noteInfo.textContent =
+        `Note auto : ${noteAuto} | Note totale : ${noteTotale}`;
+
+      container.innerHTML = "";
+      detail.questions.forEach(q => {
+        const div = document.createElement("div");
+        div.className = "question-correction";
+        const noteVal = (q.noteManuelle ?? "").toString().replace(".", ",");
+
+        div.innerHTML = `
+          <h4>${q.enonce} (/${q.bareme})</h4>
+          <p><strong>Type :</strong> ${q.type}</p>
+          <p><strong>Réponse étudiant :</strong> ${q.reponse ?? ""}</p>
+          <label>Note manuelle :
+            <input type="number"
+                   step="0.1"
+                   min="0"
+                   max="${q.bareme}"
+                   value="${noteVal}"
+                   data-question-id="${q.questionId}">
+          </label>
+          <br>
+          <label>Commentaire :
+            <textarea rows="2"
+                      data-question-id="${q.questionId}">${q.commentaireManuel ?? ""}</textarea>
+          </label>
+          <br>
+          <button class="btn btn-primary btn-save-correction"
+                  data-tid="${detail.tentativeId}"
+                  data-qid="${q.questionId}"
+                  style="margin-top:6px;">
+            Enregistrer la correction
+          </button>
+        `;
+        container.appendChild(div);
+      });
+
+      container.querySelectorAll(".btn-save-correction").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const tid = btn.dataset.tid;
+          const qid = btn.dataset.qid;
+          soumettreCorrection(tid, qid, btn);
+        });
+      });
+
+    } catch (err) {
+      console.error(err);
+      alert("Erreur réseau lors du chargement de la copie.");
+    }
+  }
+
+  async function soumettreCorrection(tentativeId, questionId, buttonElem) {
+    const bloc = buttonElem.closest(".question-correction");
+    if (!bloc) return;
+
+    const inputNote = bloc.querySelector(`input[data-question-id="${questionId}"]`);
+    const textareaComm = bloc.querySelector(`textarea[data-question-id="${questionId}"]`);
+
+    let note = parseFloat((inputNote.value || "").replace(",", "."));
+    if (isNaN(note)) note = 0;
+
+    const commentaire = textareaComm.value || "";
+
+    const bodyObj = { note, commentaire };
+
+    try {
+      const res = await fetch(
+        `/api/enseignants/tentatives/${tentativeId}/questions/${questionId}/notation`,
+        {
+          method: "PUT",
+          headers: {
+            "X-User-Id": USERS.enseignant.id,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(bodyObj)
+        }
+      );
+
+      if (!res.ok) {
+        const txt = await res.text();
+        alert("Erreur correction : " + txt);
+        return;
+      }
+
+      // Rechargement de la copie pour mettre à jour la note totale
+      await loadCopieDetail(tentativeId);
+
+      // Recharger aussi la liste des copies pour voir la note mise à jour
+      if (currentExamCodeForCopies) {
+        await loadCopies(currentExamCodeForCopies, currentExamTitleForCopies);
+      }
+
+      alert("Correction enregistrée.");
+
+    } catch (err) {
+      console.error(err);
+      alert("Erreur réseau lors de l'enregistrement de la correction.");
+    }
+  }
+
+  // ============================================================
+  // INITIALISATION
+  // ============================================================
   initQuestionEditor();
-  switchRole("etudiant");
+  updateUserLabels();
+  showOnlySection("section-login");
+  setHeaderSession("Non connecté", false);
 </script>
 
 </body>
