@@ -40,50 +40,6 @@ public class ExamenController {
         this.tentativeRepository = tentativeRepository;
     }
 
-    @GetMapping("/examens/{examenId}/tentatives-a-corriger")
-    @PreAuthorize("hasRole('ENSEIGNANT')")
-    public ResponseEntity<?> getTentativesACorriger(@PathVariable UUID examenId, Authentication auth) {
-        try {
-            UUID enseignantId = getEnseignantCourantId(auth);
-            Examen examen = examenService.trouverParId(examenId)
-                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
-
-            // Vérifier que l'enseignant est le créateur
-            if (!examen.getCreateur().getId().equals(enseignantId)) {
-                return ResponseEntity.status(403).body("Accès refusé");
-            }
-
-            List<Tentative> tentatives = tentativeService.getTentativesExamen(examenId, enseignantId);
-
-            List<Map<String, Object>> result = new ArrayList<>();
-            for (Tentative t : tentatives) {
-                if (t.getStatut() == ca.uqac.examgu.model.Enumerations.StatutTentative.SOUMISE) {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("id", t.getId());
-                    map.put("etudiantNom", t.getEtudiant().getNom() + " " + t.getEtudiant().getPrenom());
-                    map.put("etudiantEmail", t.getEtudiant().getEmail());
-                    map.put("dateSoumission", t.getDateSoumission());
-                    map.put("noteFinale", t.getNoteFinale());
-                    map.put("estNoteFinaleCalculee", t.isEstNoteFinaleCalculee());
-
-                    // Compter les questions à développement non corrigées
-                    long questionsDevNonCorrigees = t.getReponses().stream()
-                            .filter(r -> r.estQuestionDeveloppement() && !r.isEstCorrigee())
-                            .count();
-                    map.put("questionsDevNonCorrigees", questionsDevNonCorrigees);
-
-                    result.add(map);
-                }
-            }
-
-            return ResponseEntity.ok(result);
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
-        }
-    }
-
-
     @PostMapping
     @PreAuthorize("hasRole('ENSEIGNANT')")
     public ResponseEntity<?> creerExamen(@RequestBody ExamenDTO examen,
@@ -428,7 +384,6 @@ public class ExamenController {
         }
     }
 
-
     @GetMapping("/{examenId}/inscriptions")
     @PreAuthorize("hasRole('ETUDIANT') or hasRole('ADMIN')")
     public ResponseEntity<?> getInscriptionsExamen(@PathVariable UUID examenId, Authentication auth) {
@@ -613,6 +568,7 @@ public class ExamenController {
         }
     }
 
+
     @PostMapping("/{examenId}/publier-notes")
     @PreAuthorize("hasRole('ENSEIGNANT')")
     public ResponseEntity<?> publierNotes(@PathVariable UUID examenId, Authentication auth) {
@@ -624,6 +580,12 @@ public class ExamenController {
             // Vérifier que l'enseignant est le créateur
             if (!examen.getCreateur().getId().equals(enseignantId)) {
                 return ResponseEntity.status(403).body("Accès refusé");
+            }
+
+            // Vérifier que l'examen est terminé
+            if (examen.getDateFin() != null && examen.getDateFin().isAfter(LocalDateTime.now())) {
+                return ResponseEntity.badRequest()
+                        .body("La publication des notes n'est disponible qu'après la date de fin de l'examen");
             }
 
             Examen examenMisAJour = examenService.publierNotes(examenId);
@@ -639,6 +601,7 @@ public class ExamenController {
             return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
         }
     }
+
 
     @PostMapping("/{examenId}/masquer-notes")
     @PreAuthorize("hasRole('ENSEIGNANT')")
@@ -688,6 +651,67 @@ public class ExamenController {
         }
     }
 
+
+    @PostMapping("/{examenId}/corriger-automatiquement")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> corrigerAutomatiquement(@PathVariable UUID examenId, Authentication auth) {
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+            Examen examen = examenService.trouverParId(examenId)
+                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+            // Vérifier que l'enseignant est le créateur
+            if (!examen.getCreateur().getId().equals(enseignantId)) {
+                return ResponseEntity.status(403).body("Accès refusé");
+            }
+
+            // Vérifier que l'examen est terminé
+            if (examen.getDateFin() != null && examen.getDateFin().isAfter(LocalDateTime.now())) {
+                return ResponseEntity.badRequest().body("La correction automatique n'est disponible qu'après la date de fin de l'examen");
+            }
+
+            // Corriger automatiquement toutes les tentatives
+            Map<String, Object> resultat = examenService.corrigerAutomatiquement(examenId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Correction automatique terminée");
+            response.put("resultat", resultat);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        }
+    }
+
+
+    @GetMapping("/{examenId}/est-termine")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> estExamenTermine(@PathVariable UUID examenId, Authentication auth) {
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+            Examen examen = examenService.trouverParId(examenId)
+                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+            if (!examen.getCreateur().getId().equals(enseignantId)) {
+                return ResponseEntity.status(403).body("Accès refusé");
+            }
+
+            boolean termine = examen.getDateFin() != null &&
+                    examen.getDateFin().isBefore(LocalDateTime.now());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("examenId", examenId);
+            response.put("titre", examen.getTitre());
+            response.put("termine", termine);
+            response.put("dateFin", examen.getDateFin());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        }
+    }
 
 
 
@@ -747,6 +771,209 @@ public class ExamenController {
             return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Erreur serveur: " + e.getMessage());
+        }
+    }
+
+
+    @GetMapping("/{examenId}/statistiques-correction")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> getStatistiquesCorrection(@PathVariable UUID examenId, Authentication auth) {
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+            Examen examen = examenService.trouverParId(examenId)
+                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+            if (!examen.getCreateur().getId().equals(enseignantId)) {
+                return ResponseEntity.status(403).body("Accès refusé");
+            }
+
+            // Récupérer toutes les tentatives
+            List<Tentative> tentatives = tentativeRepository.findByExamenId(examenId);
+
+            // Calculer les statistiques
+            long totalTentatives = tentatives.size();
+            long corrigees = tentatives.stream()
+                    .filter(t -> t.isEstNoteFinaleCalculee())
+                    .count();
+            long aCorriger = totalTentatives - corrigees;
+
+            // Calculer la moyenne
+            double moyenne = tentatives.stream()
+                    .filter(t -> t.isEstNoteFinaleCalculee())
+                    .mapToDouble(Tentative::getNoteFinale)
+                    .average()
+                    .orElse(0.0);
+
+            // Meilleure et pire note
+            double meilleureNote = tentatives.stream()
+                    .filter(t -> t.isEstNoteFinaleCalculee())
+                    .mapToDouble(Tentative::getNoteFinale)
+                    .max()
+                    .orElse(0.0);
+
+            double pireNote = tentatives.stream()
+                    .filter(t -> t.isEstNoteFinaleCalculee())
+                    .mapToDouble(Tentative::getNoteFinale)
+                    .min()
+                    .orElse(0.0);
+
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("totalTentatives", totalTentatives);
+            stats.put("corrigees", corrigees);
+            stats.put("aCorriger", aCorriger);
+            stats.put("moyenne", moyenne);
+            stats.put("meilleureNote", meilleureNote);
+            stats.put("pireNote", pireNote);
+
+            return ResponseEntity.ok(stats);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        }
+    }
+
+
+    @GetMapping("/{examenId}/statut-publication")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> getStatutPublicationNotes(@PathVariable UUID examenId, Authentication auth) {
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+            Examen examen = examenService.trouverParId(examenId)
+                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+            if (!examen.getCreateur().getId().equals(enseignantId)) {
+                return ResponseEntity.status(403).body("Accès refusé");
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("notesVisibles", examen.isNotesVisibles());
+            response.put("datePublication", examen.getDatePublicationNotes());
+            response.put("examenId", examenId);
+            response.put("titre", examen.getTitre());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        }
+    }
+
+
+    @GetMapping("/{examenId}/tentatives-non-corrigees")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> getTentativesNonCorrigees(@PathVariable UUID examenId, Authentication auth) {
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+            Examen examen = examenService.trouverParId(examenId)
+                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+            // Vérifier que l'enseignant est le créateur
+            if (!examen.getCreateur().getId().equals(enseignantId)) {
+                return ResponseEntity.status(403).body("Accès refusé");
+            }
+
+            // Récupérer toutes les tentatives de l'examen
+            List<Tentative> tentatives = tentativeService.getTentativesExamen(examenId, enseignantId);
+
+            // Filtrer les tentatives non corrigées
+            List<UUID> tentativesNonCorrigees = tentatives.stream()
+                    .filter(t -> !t.isEstCorrigee())
+                    .map(Tentative::getId)
+                    .collect(Collectors.toList());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("examenId", examenId);
+            response.put("titreExamen", examen.getTitre());
+            response.put("tentativesNonCorrigees", tentativesNonCorrigees);
+            response.put("nombreTentativesNonCorrigees", tentativesNonCorrigees.size());
+            response.put("nombreTentativesTotal", tentatives.size());
+
+            return ResponseEntity.ok(response);
+
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{examenId}/est-totalement-corrige")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> estExamenTotalementCorrige(@PathVariable UUID examenId, Authentication auth) {
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+            Examen examen = examenService.trouverParId(examenId)
+                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+            // Vérifier que l'enseignant est le créateur
+            if (!examen.getCreateur().getId().equals(enseignantId)) {
+                return ResponseEntity.status(403).body("Accès refusé");
+            }
+
+            // Récupérer toutes les tentatives de l'examen
+            List<Tentative> tentatives = tentativeService.getTentativesExamen(examenId, enseignantId);
+
+            // Vérifier si toutes les tentatives sont corrigées
+            boolean toutesCorrigees = true;
+            List<UUID> tentativesNonCorrigees = new ArrayList<>();
+
+            for (Tentative t : tentatives) {
+                if (!t.isEstCorrigee()) {
+                    toutesCorrigees = false;
+                    tentativesNonCorrigees.add(t.getId());
+                }
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("examenId", examenId);
+            response.put("titreExamen", examen.getTitre());
+            response.put("estTotalementCorrige", toutesCorrigees);
+            response.put("tentativesNonCorrigees", tentativesNonCorrigees);
+            response.put("nombreTentativesNonCorrigees", tentativesNonCorrigees.size());
+            response.put("nombreTentativesTotal", tentatives.size());
+
+            if (!toutesCorrigees) {
+                response.put("message",
+                        String.format("%d tentative(s) sur %d ne sont pas encore corrigées",
+                                tentativesNonCorrigees.size(), tentatives.size()));
+            } else {
+                response.put("message", "Toutes les tentatives sont corrigées");
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        }
+    }
+
+
+    @GetMapping("/{examenId}/verifier-correction-disponible")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> verifierCorrectionDisponible(@PathVariable UUID examenId, Authentication auth) {
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+            Examen examen = examenService.trouverParId(examenId)
+                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+            if (!examen.getCreateur().getId().equals(enseignantId)) {
+                return ResponseEntity.status(403).body("Accès refusé");
+            }
+
+            boolean correctionDisponible = examen.getDateFin() != null &&
+                    examen.getDateFin().isBefore(LocalDateTime.now());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("correctionDisponible", correctionDisponible);
+            response.put("dateFin", examen.getDateFin());
+            response.put("dateActuelle", LocalDateTime.now());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
         }
     }
 

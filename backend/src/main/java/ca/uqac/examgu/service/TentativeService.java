@@ -6,6 +6,7 @@ import ca.uqac.examgu.repository.EtudiantRepository;
 import ca.uqac.examgu.repository.TentativeRepository;
 import ca.uqac.examgu.repository.ExamenRepository;
 import ca.uqac.examgu.repository.UtilisateurRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -213,7 +214,7 @@ public class TentativeService {
 
         // Filtrer les réponses pour ne garder que les questions à développement
         List<ReponseDonnee> reponsesDevOnly = tentative.getReponses().stream()
-                .filter(reponse -> reponse.estQuestionDeveloppement())
+                .filter(reponse -> reponse.getQuestion().getType().equals("DEVELOPPEMENT"))
                 .collect(Collectors.toList());
 
         return reponsesDevOnly;
@@ -230,7 +231,7 @@ public class TentativeService {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Réponse non trouvée"));
 
-        if (!reponse.estQuestionDeveloppement()) {
+        if (!reponse.getQuestion().getType().equals("DEVELOPPEMENT")) {
             throw new IllegalArgumentException("Seules les questions à développement peuvent être corrigées manuellement");
         }
 
@@ -296,4 +297,8 @@ public class TentativeService {
         }
     }
 
+
+    public List<Tentative> getTents(){
+        return tentativeRepository.findAll();
+    }
 }

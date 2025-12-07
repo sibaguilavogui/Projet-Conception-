@@ -163,11 +163,65 @@ public class ExamenService {
         return -1;
     }
 
+
+    public Map<String, Object> corrigerAutomatiquement(UUID examenId) {
+        Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+        List<Tentative> toutesTentatives = tentativeRepository.findByExamenId(examenId)
+                .stream()
+                .filter(t -> t.getStatut() == StatutTentative.SOUMISE)
+                .collect(Collectors.toList());
+
+        Map<String, Object> resultat = new HashMap<>();
+        List<Map<String, Object>> tentativesCorrigees = new ArrayList<>();
+        int qcmCorrigesTotal = 0;
+
+        for (Tentative tentative : toutesTentatives) {
+            Map<String, Object> infoTentative = new HashMap<>();
+            infoTentative.put("tentativeId", tentative.getId());
+            infoTentative.put("etudiant", tentative.getEtudiant().getNom() + " " + tentative.getEtudiant().getPrenom());
+
+            int qcmCorriges = 0;
+            for (ReponseDonnee reponse : tentative.getReponses()) {
+                if (reponse.getQuestion().getType().equals("CHOIX") && !reponse.isEstCorrigee()) {
+                    try {
+                        reponse.corrigerAutomatiquement();
+                        qcmCorriges++;
+                    } catch (Exception e) {
+                        // Ignorer les erreurs
+                    }
+                }
+            }
+
+            qcmCorrigesTotal += qcmCorriges;
+            tentativeRepository.save(tentative);
+
+            infoTentative.put("qcmCorriges", qcmCorriges);
+            infoTentative.put("statut", "SUCCES");
+            tentativesCorrigees.add(infoTentative);
+        }
+
+        resultat.put("examenId", examenId);
+        resultat.put("titreExamen", examen.getTitre());
+        resultat.put("tentativesCorrigees", tentativesCorrigees);
+        resultat.put("qcmCorrigesTotal", qcmCorrigesTotal);
+        resultat.put("message", String.format("%d QCM corrigés automatiquement dans %d tentatives",
+                qcmCorrigesTotal, toutesTentatives.size()));
+
+        return resultat;
+    }
+
+
     public Examen publierNotes(UUID examenId){
         Examen examen = examenRepository.findById(examenId)
                 .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
-        examen.publierNotes();
-        return examenRepository.save(examen);
+        if(estExamenTotalementCorrige(examenId, examen.getCreateur().getId())){
+            examen.publierNotes();
+            return examenRepository.save(examen);
+        }
+
+        throw new RuntimeException("Toute les tentatives ne sont pas corrigées");
     }
 
     public Examen masquerNotes(UUID examenId){
@@ -175,6 +229,50 @@ public class ExamenService {
                 .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
         examen.masquerNotes();
         return examenRepository.save(examen);
+    }
+
+    public boolean estExamenTermine(UUID examenId) {
+        Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+        if (examen.getDateFin() == null) {
+            return false;
+        }
+
+        return examen.getDateFin().isBefore(LocalDateTime.now());
+    }
+
+    public List<UUID> getTentativesNonCorrigees(UUID examenId, UUID enseignantId) {
+        Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+        if (!examen.getCreateur().getId().equals(enseignantId)) {
+            throw new SecurityException("Seul le créateur de l'examen peut voir les tentatives non corrigées");
+        }
+
+        List<Tentative> tentatives = tentativeRepository.findByExamenId(examenId);
+
+        return tentatives.stream()
+                .filter(t -> !t.isEstCorrigee())
+                .map(Tentative::getId)
+                .collect(Collectors.toList());
+    }
+
+    public boolean estExamenTotalementCorrige(UUID examenId, UUID enseignantId) {
+        Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+        if (!examen.getCreateur().getId().equals(enseignantId)) {
+            throw new SecurityException("Seul le créateur de l'examen peut voir l'état de correction");
+        }
+
+        List<Tentative> tentatives = tentativeRepository.findByExamenId(examenId);
+
+        if (tentatives.isEmpty()) {
+            return true; // Aucune tentative, donc rien à corriger
+        }
+
+        return tentatives.stream().allMatch(Tentative::isEstCorrigee);
     }
 
     public Map<String, Object> calculerNotesFinalesExamen(UUID examenId) {
@@ -198,7 +296,7 @@ public class ExamenService {
 
             // Vérifier les questions à développement non corrigées
             List<Question> questionsDevNonCorrigees = tentative.getReponses().stream()
-                    .filter(r -> r.getQuestion() instanceof QuestionADeveloppement && !r.isEstCorrigee())
+                    .filter(r -> r.getQuestion().getType().equals("DEVELOPPEMENT") && !r.isEstCorrigee())
                     .map(ReponseDonnee::getQuestion)
                     .collect(Collectors.toList());
 
@@ -219,7 +317,7 @@ public class ExamenService {
             // Corriger automatiquement les QCM
             int qcmCorriges = 0;
             for (ReponseDonnee reponse : tentative.getReponses()) {
-                if (reponse.getQuestion() instanceof QuestionAChoix && !reponse.isEstCorrigee()) {
+                if (reponse.getQuestion().getType().equals("CHOIX") && !reponse.isEstCorrigee()) {
                     try {
                         reponse.corrigerAutomatiquement();
                         qcmCorriges++;

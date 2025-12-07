@@ -409,7 +409,7 @@ public class TentativeController {
 
 
     @GetMapping("/{tentativeId}")
-    @PreAuthorize("hasRole('ETUDIANT'), hasRole('ENSEIGNANT')")
+    @PreAuthorize("hasAnyRole('ETUDIANT', 'ENSEIGNANT')")
     public ResponseEntity<?> getTentative(@PathVariable UUID tentativeId, Authentication auth) {
         boolean estEnseignant = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ENSEIGNANT"));
@@ -528,6 +528,113 @@ public class TentativeController {
     }
 
 
+    @GetMapping("/{tentativeId}/questions-developpement")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> getQuestionsDeveloppementPourCorrection(
+            @PathVariable UUID tentativeId,
+            Authentication auth) {
+
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+
+            // Récupérer la tentative
+            Tentative tentative = tentativeService.getTentativePourCorrection(tentativeId, enseignantId);
+
+            // Vérifier que l'examen est terminé
+            Examen examen = tentative.getExamen();
+            if (examen.getDateFin() != null && examen.getDateFin().isAfter(LocalDateTime.now())) {
+                return ResponseEntity.badRequest()
+                        .body("La correction n'est disponible qu'après la date de fin de l'examen");
+            }
+
+            // Filtrer pour ne garder que les questions à développement
+            List<Map<String, Object>> questionsDev = new ArrayList<>();
+            for (Question question : examen.getQuestions()) {
+                if (question instanceof QuestionADeveloppement) {
+                    Map<String, Object> questionMap = new HashMap<>();
+                    questionMap.put("id", question.getId());
+                    questionMap.put("enonce", question.getEnonce());
+                    questionMap.put("bareme", question.getBareme());
+                    questionMap.put("ordre", examen.getQuestions().indexOf(question) + 1);
+
+                    // Récupérer la réponse de l'étudiant
+                    ReponseDonnee reponse = tentative.trouverReponse(question.getId());
+                    if (reponse != null) {
+                        questionMap.put("reponseId", reponse.getId());
+                        questionMap.put("contenu", reponse.getContenu());
+                        questionMap.put("notePartielle", reponse.getNotePartielle());
+                        questionMap.put("estCorrigee", reponse.isEstCorrigee());
+                    }
+
+                    questionsDev.add(questionMap);
+                }
+            }
+
+            // Préparer la réponse
+            Map<String, Object> response = new HashMap<>();
+            response.put("tentativeId", tentative.getId());
+            response.put("etudiant", mapEtudiant(tentative.getEtudiant()));
+            response.put("questionsDeveloppement", questionsDev);
+            response.put("examenTermine", examen.getDateFin().isBefore(LocalDateTime.now()));
+            response.put("dateFin", examen.getDateFin());
+
+            return ResponseEntity.ok(response);
+
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body("Erreur lors de la récupération: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{tentativeId}/corriger-developpement")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> corrigerQuestionsDeveloppement(
+            @PathVariable UUID tentativeId,
+            @RequestBody Map<String, Object> corrections,
+            Authentication auth) {
+
+        try {
+            UUID enseignantId = getEnseignantCourantId(auth);
+
+            // Récupérer la tentative
+            Tentative tentative = tentativeService.getTentativePourCorrection(tentativeId, enseignantId);
+
+            // Vérifier que l'examen est terminé
+            Examen examen = tentative.getExamen();
+            if (examen.getDateFin() != null && examen.getDateFin().isAfter(LocalDateTime.now())) {
+                return ResponseEntity.badRequest()
+                        .body("La correction n'est disponible qu'après la date de fin de l'examen");
+            }
+
+            // Extraire les corrections
+            List<Map<String, Object>> correctionsList = (List<Map<String, Object>>) corrections.get("corrections");
+            Map<UUID, Double> notes = new HashMap<>();
+            Map<UUID, String> commentaires = new HashMap<>();
+
+            for (Map<String, Object> correction : correctionsList) {
+                UUID reponseId = UUID.fromString((String) correction.get("reponseId"));
+                double note = ((Number) correction.get("note")).doubleValue();
+                String commentaire = (String) correction.get("commentaire");
+
+                notes.put(reponseId, note);
+                commentaires.put(reponseId, commentaire);
+            }
+
+            // Appliquer les corrections
+            Tentative tentativeCorrigee = tentativeService.corrigerTentativeComplete(
+                    tentativeId, notes, commentaires, enseignantId);
+
+            return ResponseEntity.ok(tentativeCorrigee);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
+        }
+    }
+
 
     private Map<String, Object> formaterTentativePourCorrection(Tentative tentative) {
         Map<String, Object> result = new HashMap<>();
@@ -559,7 +666,6 @@ public class TentativeController {
                 rMap.put("contenu", reponse.getContenu());
                 rMap.put("notePartielle", reponse.getNotePartielle());
                 rMap.put("estCorrigee", reponse.isEstCorrigee());
-                rMap.put("autoCorrigee", reponse.isAutoCorrigee());
                 rMap.put("dateCorrection", reponse.getDateCorrection());
                 qMap.put("reponse", rMap);
             }
@@ -592,19 +698,6 @@ public class TentativeController {
         return map;
     }
 
-    private UUID getEnseignantId(Authentication auth) {
-        return enseignantService.findByEmail(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Enseignant non trouvé"))
-                .getId();
-    }
-
-    private UUID getEtudiantId(Authentication auth) {
-        return etudiantService.findByEmail(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Étudiant non trouvé"))
-                .getId();
-    }
-
-
     private UUID getEnseignantCourantId(Authentication authentication) {
         String email = authentication.getName();
         ca.uqac.examgu.model.Enseignant enseignant = enseignantService.findByEmail(email)
@@ -616,5 +709,10 @@ public class TentativeController {
         Etudiant etudiant = etudiantService.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Etudiant non trouvé"));
         return etudiant.getId();
+    }
+
+    @GetMapping
+    public List<Tentative> getTents(){
+        return tentativeService.getTents();
     }
 }

@@ -62,6 +62,8 @@ public abstract class Question {
         return true;
     }
 
+    public abstract String getType();
+
     public UUID getId() {
         return id;
     }

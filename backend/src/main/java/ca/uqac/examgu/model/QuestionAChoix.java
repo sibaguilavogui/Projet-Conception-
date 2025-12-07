@@ -207,6 +207,11 @@ public class QuestionAChoix extends Question {
     }
 
     @Override
+    public String getType() {
+        return "CHOIX";
+    }
+
+    @Override
     public String toString() {
         return String.format("QuestionAChoix{id=%s, enonce='%s', type=%s, bareme=%.1f}",
                 getId(), getEnonce(), typeChoix, getBareme());

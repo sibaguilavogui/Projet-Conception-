@@ -619,3 +619,72 @@ button:disabled:hover {
 .btn-info:hover {
   background-color: #138496;
 }
+
+.resultat-detail {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.score-resume {
+  text-align: center;
+  padding: 2rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.commentaires-section {
+  margin-top: 2rem;
+}
+
+.commentaires-list {
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.commentaire-item {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  background-color: #f8f9fa;
+}
+
+.commentaire-item:nth-child(even) {
+  background-color: white;
+}
+
+.footer-actions {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dee2e6;
+  text-align: center;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .score-resume {
+    padding: 1.5rem;
+  }
+  
+  .score-resume h3 {
+    font-size: 1.2rem;
+  }
+  
+  .score-value {
+    font-size: 2.5rem;
+  }
+  
+  .commentaires-section h3 {
+    font-size: 1.2rem;
+  }
+  
+  .commentaires-list {
+    padding: 1rem;
+  }
+}

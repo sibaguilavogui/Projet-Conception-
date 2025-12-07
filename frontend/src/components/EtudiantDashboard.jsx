@@ -12,6 +12,8 @@ const EtudiantDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [examenResultat, setExamenResultat] = useState(null);
+  const [tentativeResultat, setTentativeResultat] = useState(null);
   
   // États pour la gestion des examens
   const [etapeExamen, setEtapeExamen] = useState(null);
@@ -134,7 +136,10 @@ const EtudiantDashboard = () => {
   const chargerResultats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/resultats', {
+      
+      // Option 1: Récupérer toutes les tentatives de l'étudiant
+      // Note: Cet endpoint retourne toutes les tentatives
+      const response = await fetch('http://localhost:8080/tentatives', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -143,11 +148,75 @@ const EtudiantDashboard = () => {
       });
       
       if (response.ok) {
-        const data = await response.json();
-        setResultats(data);
+        const toutesTentatives = await response.json();
+        
+        // Filtrer pour ne garder que les tentatives soumises ou expirées
+        const tentativesFiltrees = toutesTentatives.filter(t => 
+          t.statut === 'SOUMISE' || t.statut === 'EXPIREE'
+        );
+        
+        // Transformer les données pour correspondre à la structure attendue
+        const resultatsFormates = await Promise.all(
+          tentativesFiltrees.map(async (tentative) => {
+            // Pour chaque tentative, récupérer l'examen associé
+            const examenResponse = await fetch(
+              `http://localhost:8080/examens/${tentative.examen?.id}`,
+              {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            
+            let examen = null;
+            if (examenResponse.ok) {
+              examen = await examenResponse.json();
+            }
+            
+            return {
+              id: tentative.id,
+              score: tentative.noteFinale || 0,
+              statut: tentative.statut,
+              estCorrigee: tentative.estCorrigee || false,
+              dateSoumission: tentative.dateSoumission || tentative.dateCreation,
+              examen: examen || tentative.examen,
+              tentativeId: tentative.id
+            };
+          })
+        );
+        
+        setResultats(resultatsFormates);
       }
     } catch (err) {
       console.error('Erreur lors du chargement des résultats:', err);
+      setError('Impossible de charger les résultats');
+    }
+  };
+
+  const verifierNotesVisibles = async (examenId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `http://localhost:8080/examens/${examenId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.ok) {
+        const examen = await response.json();
+        return examen.notesVisibles || false;
+      }
+      return false;
+    } catch (err) {
+      console.error('Erreur lors de la vérification des notes:', err);
+      return false;
     }
   };
 
@@ -303,6 +372,104 @@ const EtudiantDashboard = () => {
   const terminerExamen = () => {
     resetExamen();
     chargerExamensAvecStatuts();
+    setExamenResultat(null);
+    setTentativeResultat(null);
+  };
+
+  const fermerResultatDetail = () => {
+    setExamenResultat(null);
+    setTentativeResultat(null);
+    setEtapeExamen(null);
+    setActiveTab('examens-disponibles');
+  };
+
+  const consulterResultatExamen = async (examen) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Étape 1: Vérifier l'existence d'une tentative
+      const verificationResponse = await fetch(
+        `http://localhost:8080/examens/${examen.id}/verifier-tentative`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (verificationResponse.ok) {
+        const verificationData = await verificationResponse.json();
+        
+        if (verificationData.tentativeExistante && verificationData.tentativeId) {
+          // Étape 2: Récupérer la tentative complète
+          const tentativeResponse = await fetch(
+            `http://localhost:8080/tentatives/${verificationData.tentativeId}`,
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          if (tentativeResponse.ok) {
+            const tentativeData = await tentativeResponse.json();
+            
+            // Étape 3: Récupérer la note de l'examen (si disponible)
+            const noteResponse = await fetch(
+              `http://localhost:8080/examens/${examen.id}/ma-note`,
+              {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            
+            let noteData = null;
+            if (noteResponse.ok) {
+              noteData = await noteResponse.json();
+            }
+            
+            // Organiser les données pour l'affichage
+            const resultatOrganise = {
+              examen: examen,
+              tentative: tentativeData,
+              note: noteData?.note || tentativeData.noteFinale || 0,
+              estCorrigee: tentativeData.estCorrigee || false,
+              commentaires: []
+            };
+            
+            // Extraire les commentaires des réponses corrigées
+            if (tentativeData.reponses && tentativeData.reponses.length > 0) {
+              tentativeData.reponses.forEach((reponse, index) => {
+                if (reponse.estCorrigee && reponse.commentaire) {
+                  resultatOrganise.commentaires.push({
+                    questionNumero: index + 1,
+                    questionId: reponse.question?.id || null,
+                    texte: reponse.commentaire,
+                    pointsObtenus: reponse.notePartielle || 0,
+                    pointsMax: reponse.question?.bareme || 0
+                  });
+                }
+              });
+            }
+            
+            setExamenResultat(resultatOrganise.examen);
+            setTentativeResultat(resultatOrganise);
+            setEtapeExamen('resultat-detail');
+          }
+        } else {
+          setError('Aucune tentative trouvée pour cet examen');
+        }
+      }
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   // Réinitialiser les états de l'examen
@@ -442,6 +609,129 @@ const EtudiantDashboard = () => {
         </div>
       )}
 
+      {etapeExamen === 'resultat-detail' && examenResultat && tentativeResultat && (
+  <div className="examen-etape">
+    <div className="etape-header">
+      <button className="btn-back" onClick={() => {
+        setExamenResultat(null);
+        setTentativeResultat(null);
+        setEtapeExamen(null);
+        setActiveTab('examens-disponibles');
+      }}>
+        <Icon type="back" />
+        Retour aux examens
+      </button>
+    </div>
+    
+    <div className="resultat-detail">
+      <div style={{ padding: '2rem' }}>
+        <div className="section-header">
+          <h2>Résultats de l'examen : {examenResultat.titre}</h2>
+        </div>
+        
+        {tentativeResultat.estCorrigee ? (
+          <div className="resultat-content">
+            <div className="score-resume" style={{
+              textAlign: 'center',
+              padding: '2rem',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px',
+              marginBottom: '2rem'
+            }}>
+              <h3 style={{ marginBottom: '1rem', color: '#333' }}>Votre Score</h3>
+              <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#17a2b8', marginBottom: '0.5rem' }}>
+                {tentativeResultat.note?.toFixed(1) || '0.0'}
+                <span style={{ fontSize: '1.5rem', color: '#6c757d' }}>
+                  /{examenResultat.totalPoints || '?'}
+                </span>
+              </div>
+              <div style={{ fontSize: '1.2rem', color: '#495057' }}>
+                {examenResultat.totalPoints ? 
+                  `${((tentativeResultat.note / examenResultat.totalPoints) * 100).toFixed(1)}%` : 
+                  'N/A'}
+              </div>
+            </div>
+            
+            <div className="commentaires-section" style={{ marginTop: '2rem' }}>
+              <h3 style={{ marginBottom: '1rem', color: '#333' }}>Commentaires</h3>
+              {tentativeResultat.commentaires && tentativeResultat.commentaires.length > 0 ? (
+                <div className="commentaires-list" style={{
+                  backgroundColor: 'white',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '8px',
+                  padding: '1.5rem'
+                }}>
+                  {tentativeResultat.commentaires.map((commentaire, index) => (
+                    <div key={index} style={{
+                      padding: '1rem',
+                      borderBottom: index < tentativeResultat.commentaires.length - 1 ? '1px solid #e9ecef' : 'none',
+                      backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                        <strong style={{ color: '#495057' }}>Question {commentaire.questionNumero || index + 1}</strong>
+                        <span style={{ 
+                          backgroundColor: commentaire.pointsObtenus > 0 ? '#d1e7dd' : '#f8d7da',
+                          color: commentaire.pointsObtenus > 0 ? '#0f5132' : '#842029',
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '20px',
+                          fontSize: '0.85rem'
+                        }}>
+                          {commentaire.pointsObtenus || 0}/{commentaire.pointsMax || '?'} pts
+                        </span>
+                      </div>
+                      <div style={{ color: '#666', fontSize: '0.95rem' }}>
+                        {commentaire.texte || 'Aucun commentaire spécifique'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state" style={{ 
+                  textAlign: 'center', 
+                  padding: '2rem',
+                  color: '#6c757d'
+                }}>
+                  <Icon type="info" style={{ fontSize: '2rem', marginBottom: '1rem' }} />
+                  <p>Aucun commentaire disponible</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="loading" style={{ textAlign: 'center', padding: '3rem' }}>
+            <div className="spinner" style={{
+              width: '40px',
+              height: '40px',
+              border: '4px solid #f3f3f3',
+              borderTop: '4px solid #17a2b8',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 1rem'
+            }}></div>
+            <p style={{ color: '#6c757d' }}>
+              {tentativeResultat.tentative?.statut === 'EN_COURS' ? 
+                'Examen en cours de correction...' : 
+                'En attente de correction...'}
+            </p>
+            <p className="subtext" style={{ color: '#adb5bd', fontSize: '0.9rem' }}>
+              Les résultats seront disponibles une fois l'examen corrigé
+            </p>
+            <button className="btn-secondary" onClick={() => {
+              setExamenResultat(null);
+              setTentativeResultat(null);
+              setEtapeExamen(null);
+              setActiveTab('examens-disponibles');
+            }} style={{ marginTop: '1rem' }}>
+              <Icon type="back" />
+              Retour aux examens
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
       <div className="tab-content">
         {activeTab === 'examens-disponibles' && !etapeExamen && (
           <div className="examens-disponibles">
@@ -520,16 +810,12 @@ const EtudiantDashboard = () => {
                         </button>
                       ) : examen.statut === 'Terminé' ? (
                         <button 
-                          className="btn-secondary"
-                          onClick={() => {
-                            if (examen.statutData?.tentativeId) {
-                              setExamenEnCours(examen);
-                              setEtapeExamen('confirmation');
-                            }
-                          }}
+                          className="btn-info"
+                          onClick={() => consulterResultatExamen(examen)}
+                          title="Consulter mes résultats"
                         >
                           <Icon type="eye" />
-                          Consulter
+                          Consulter les résultats
                         </button>
                       ) : (
                         <button 
@@ -644,16 +930,23 @@ const EtudiantDashboard = () => {
                           <td>
                             <button 
                               className="btn-info btn-sm"
-                              onClick={() => {
-                                const details = `
-                                  Examen: ${resultat.examen?.titre || 'Inconnu'}
-                                  Score: ${resultat.score?.toFixed(1) || '0.0'}/${resultat.examen?.totalPoints || '?'}
-                                  Note: ${pourcentage.toFixed(1)}%
-                                  Statut: ${resultat.statut || 'Inconnu'}
-                                  Date: ${formaterDate(resultat.dateSoumission)}
-                                  ${resultat.estCorrigee ? '✓ Corrigé' : '⏳ En attente de correction'}
-                                `;
-                                alert(details);
+                              onClick={async () => {
+                                try {
+                                  const token = localStorage.getItem('token');
+                                  
+                                  // Trouver l'examen correspondant
+                                  const examen = examensAvecStatut.find(e => e.id === resultat.examen?.id) || resultat.examen;
+                                  
+                                  if (!examen) {
+                                    setError('Examen non trouvé');
+                                    return;
+                                  }
+                                  
+                                  // Utiliser la même fonction pour consulter les résultats
+                                  await consulterResultatExamen(examen);
+                                } catch (err) {
+                                  setError(err.message);
+                                }
                               }}
                             >
                               <Icon type="eye" />

@@ -16,6 +16,11 @@ public class QuestionADeveloppement extends Question {
     }
 
     @Override
+    public String getType() {
+        return "DEVELOPPEMENT";
+    }
+
+    @Override
     public String toString() {
         return String.format("QuestionADeveloppement{id=%s, enonce='%s', bareme=%.1f}",
                 getId(), getEnonce(), getBareme());

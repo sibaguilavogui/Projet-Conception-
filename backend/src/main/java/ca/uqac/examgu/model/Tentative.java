@@ -103,7 +103,7 @@ public class Tentative {
             reponse.setTentative(this);
             reponses.add(reponse);
         } else {
-            reponse.mettreAJourContenu(contenu, now);
+            reponse.mettreAJourContenu(contenu);
         }
 
         this.dateModification = now;
@@ -119,11 +119,7 @@ public class Tentative {
         this.fin = now;
         this.dateSoumission = now;
         this.statut = StatutTentative.SOUMISE;
-
-        // Corriger automatiquement les questions QCM
         corrigerAutomatiquement();
-
-        // Recalculer le score total
         this.dateModification = now;
     }
 
@@ -155,10 +151,12 @@ public class Tentative {
 
     private void corrigerAutomatiquement() throws Exception {
         for (ReponseDonnee reponse : reponses) {
-            if (reponse.getQuestion() instanceof QuestionAChoix && !reponse.isEstCorrigee()) {
+            if (reponse.getQuestion().getType().equals("CHOIX") && !reponse.isEstCorrigee()) {
                 reponse.corrigerAutomatiquement();
+                reponse.setEstCorrigee(true);
             }
         }
+        verifierEtMettreAJourCorrection();
     }
 
     public void noterManuellement(UUID questionId, double note, String commentaire) {
@@ -171,7 +169,7 @@ public class Tentative {
             throw new IllegalArgumentException("Question introuvable: " + questionId);
         }
 
-        if (!(question instanceof QuestionADeveloppement)) {
+        if (!(question.getType().equals("DEVELOPPEMENT"))) {
             throw new IllegalArgumentException("Seules les questions à développement peuvent être notées manuellement");
         }
 
@@ -184,6 +182,7 @@ public class Tentative {
 
         reponse.noterPatiellement(note, commentaire);
         this.dateModification = LocalDateTime.now();
+        verifierEtMettreAJourCorrection();
     }
 
     public void appliquerNoteManuelle(UUID questionId, double note) {
@@ -192,9 +191,9 @@ public class Tentative {
 
     public double calculerScoreAuto() {
         return reponses.stream()
-                .filter(r -> r.getQuestion() instanceof QuestionAChoix)
+                .filter(r -> r.getQuestion().getType().equals("CHOIX"))
                 .mapToDouble(r -> {
-                    if (r.getQuestion() instanceof QuestionAChoix) {
+                    if (r.getQuestion().getType().equals("CHOIX")) {
                         QuestionAChoix question = (QuestionAChoix) r.getQuestion();
                         try {
                             return question.calculerNote(r);
@@ -254,6 +253,27 @@ public class Tentative {
 
     public int getNombreReponses() {
         return reponses.size();
+    }
+
+    public boolean toutesLesReponsesSontCorrigees() {
+        if (reponses == null || reponses.isEmpty()) {
+            return true;
+        }
+
+        for (ReponseDonnee reponse : reponses) {
+            if (!reponse.isEstCorrigee()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Méthode pour synchroniser l'état estCorrigee avec les réponses
+    public void verifierEtMettreAJourCorrection() {
+        this.estCorrigee = toutesLesReponsesSontCorrigees();
+        if (estCorrigee && this.dateCalculNote == null) {
+            this.dateCalculNote = LocalDateTime.now();
+        }
     }
 
     public int getNombreQuestionsRepondues() {
@@ -391,7 +411,10 @@ public class Tentative {
     }
 
     public double getNoteFinale() {
-        return noteFinale;
+        if(examen.isNotesVisibles()){
+            return noteFinale;
+        }
+        throw new IllegalStateException("Les résultats ne sont pas visible");
     }
 
     public void setNoteFinale(double noteFinale) {

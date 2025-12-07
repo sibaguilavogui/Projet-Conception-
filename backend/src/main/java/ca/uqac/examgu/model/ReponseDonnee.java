@@ -2,6 +2,8 @@ package ca.uqac.examgu.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.Hibernate;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -59,20 +61,13 @@ public class ReponseDonnee {
         this.contenu = contenu != null ? contenu : "";
         this.dateMaj = dateMaj != null ? dateMaj : LocalDateTime.now();
         this.notePartielle = 0.0;
-        this.autoCorrigee = false;
     }
 
     public void mettreAJourContenu(String contenu) {
-        mettreAJourContenu(contenu, LocalDateTime.now());
-    }
-
-    public void mettreAJourContenu(String contenu, LocalDateTime now) {
-        this.contenu = contenu != null ? contenu : "";
-        this.dateMaj = now != null ? now : LocalDateTime.now();
-        if (this.estCorrigee && !this.autoCorrigee) {
-            this.estCorrigee = false;
-            this.notePartielle = 0.0;
-            this.dateCorrection = null;
+        if (!this.estCorrigee){
+            LocalDateTime now = LocalDateTime.now();
+            this.contenu = contenu != null ? contenu : "";
+            this.dateMaj = now;
         }
     }
 
@@ -98,22 +93,21 @@ public class ReponseDonnee {
     }
 
     public void corrigerAutomatiquement() throws Exception {
-        if (question instanceof QuestionAChoix) {
-            QuestionAChoix questionChoix = (QuestionAChoix) question;
+        if (question.getType().equals("CHOIX")) {
+            QuestionAChoix questionChoix = (QuestionAChoix) Hibernate.unproxy(question);
             double note = questionChoix.calculerNote(this);
-            noterPatiellement(note, "Correction automatique");
+            noterPatiellement(note);
         }
     }
 
     public void annulerCorrection() {
         this.notePartielle = 0.0;
         this.estCorrigee = false;
-        this.autoCorrigee = false;
         this.dateCorrection = null;
     }
 
     public boolean estQuestionDeveloppement() {
-        return question instanceof QuestionADeveloppement;
+        return question.getType().equals("DEVELOPPEMENT");
     }
 
 
@@ -192,14 +186,6 @@ public class ReponseDonnee {
 
     public void setDateCorrection(LocalDateTime dateCorrection) {
         this.dateCorrection = dateCorrection;
-    }
-
-    public boolean isAutoCorrigee() {
-        return autoCorrigee;
-    }
-
-    public void setAutoCorrigee(boolean autoCorrigee) {
-        this.autoCorrigee = autoCorrigee;
     }
 
     // Méthodes de cycle de vie JPA

@@ -366,9 +366,6 @@ public class Examen {
     }
 
     public void publierNotes() {
-        if(!isEstCorrige()){
-            throw new RuntimeException("Toute les tentatives ne sont pas corrigées");
-        }
         this.notesVisibles = true;
         this.datePublicationNotes = LocalDateTime.now();
     }

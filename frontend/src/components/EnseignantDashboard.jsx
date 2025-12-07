@@ -8,6 +8,21 @@ const EnseignantDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [resultatsExamen, setResultatsExamen] = useState(null);
+  const [resultatsTentatives, setResultatsTentatives] = useState([]);
+  const [correctionEnCours, setCorrectionEnCours] = useState(false);
+  const [examenTermine, setExamenTermine] = useState(false);
+  const [notesPubliees, setNotesPubliees] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [modalAction, setModalAction] = useState(null);
+  const [statsCorrection, setStatsCorrection] = useState({
+    totalTentatives: 0,
+    corrigees: 0,
+    aCorriger: 0,
+    moyenne: 0,
+    meilleureNote: 0,
+    pireNote: 0
+  });
   
   // États pour la création/modification d'examen
   const [nouvelExamen, setNouvelExamen] = useState({
@@ -53,6 +68,13 @@ const EnseignantDashboard = () => {
   
   // État pour l'examen détaillé
   const [examenDetaille, setExamenDetaille] = useState(null);
+
+  // État pour la modal de correction
+  const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+  const [tentativeEnCorrection, setTentativeEnCorrection] = useState(null);
+  const [questionsTentative, setQuestionsTentative] = useState([]);
+  const [notesCorrection, setNotesCorrection] = useState({});
+  const [commentairesCorrection, setCommentairesCorrection] = useState({});
 
   const chargerExamens = async () => {
     setLoading(true);
@@ -116,6 +138,83 @@ const EnseignantDashboard = () => {
     }
   };
 
+
+  const chargerQuestionsDeveloppement = async (tentativeId) => {
+      try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(`http://localhost:8080/tentatives/${tentativeId}/questions-developpement`, {
+              method: 'GET',
+              headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+              }
+          });
+          
+          if (response.ok) {
+              const data = await response.json();
+              setTentativeEnCorrection(data);
+              setQuestionsTentative(data.questionsDeveloppement);
+              
+              // Initialiser les notes et commentaires
+              const initialNotes = {};
+              const initialCommentaires = {};
+              
+              data.questionsDeveloppement.forEach(question => {
+                  initialNotes[question.id] = question.notePartielle || 0;
+                  initialCommentaires[question.id] = question.commentaire || '';
+              });
+              
+              setNotesCorrection(initialNotes);
+              setCommentairesCorrection(initialCommentaires);
+              setShowCorrectionModal(true);
+          } else {
+              const errorData = await response.text();
+              throw new Error(errorData || 'Erreur lors du chargement des questions');
+          }
+      } catch (err) {
+          setError('Erreur lors du chargement des questions: ' + err.message);
+      }
+  };
+
+  const soumettreCorrectionDeveloppement = async (tentativeId) => {
+      try {
+          const token = localStorage.getItem('token');
+          
+          // Préparer les corrections
+          const corrections = questionsTentative.map(question => ({
+              reponseId: question.reponseId,
+              note: notesCorrection[question.id] || 0,
+              commentaire: commentairesCorrection[question.id] || ''
+          }));
+          
+          const response = await fetch(`http://localhost:8080/tentatives/${tentativeId}/corriger-developpement`, {
+              method: 'POST',
+              headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ corrections })
+          });
+          
+          if (response.ok) {
+              const data = await response.json();
+              setSuccessMessage('Correction enregistrée avec succès');
+              setShowCorrectionModal(false);
+              
+              // Recharger les résultats
+              if (resultatsExamen) {
+                  await chargerResultatsExamen(resultatsExamen.id);
+              }
+          } else {
+              const errorData = await response.text();
+              throw new Error(errorData);
+          }
+      } catch (err) {
+          setError('Erreur lors de l\'enregistrement: ' + err.message);
+      }
+  };
+
+
   const chargerQuestions = async (examenId) => {
     try {
       const token = localStorage.getItem('token');
@@ -167,8 +266,10 @@ const EnseignantDashboard = () => {
           email: tentative.etudiant ? tentative.etudiant.email : 'Non disponible',
           dateSoumission: tentative.dateSoumission,
           statut: tentative.statut,
-          score: tentative.score || 0,
-          estCorrigee: tentative.estCorrigee || false,
+          score: tentative.noteFinale || 0,
+          noteFinale: tentative.noteFinale || 0,
+          estCorrigee: tentative.estNoteFinaleCalculee || false,
+          estNoteFinaleCalculee: tentative.estNoteFinaleCalculee || false,
           nombreQuestionsRepondues: tentative.nombreQuestionsRepondues || 0,
           nombreQuestionsTotal: examenSelectionne ? (examens.find(e => e.id === examenSelectionne)?.nombreQuestions || 0) : 0
         }));
@@ -634,22 +735,512 @@ const EnseignantDashboard = () => {
     setExamenDetaille(null);
   };
 
-  const corrigerTentative = (tentativeId) => {
-    window.location.href = `/correction/${tentativeId}`;
+  const corrigerTentative = async (tentativeId) => {
+      try {
+          await chargerQuestionsDeveloppement(tentativeId);
+      } catch (err) {
+          setError('Erreur lors de la correction: ' + err.message);
+      }
   };
 
-  useEffect(() => {
-    if (activeTab === 'mes-examens') {
-      chargerExamens();
+  const corrigerQuestionDeveloppement = async (questionId, note, commentaire) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Trouver la réponse ID pour cette question
+      const question = tentativeEnCorrection.questions?.find(q => q.id === questionId);
+      if (!question || !question.reponse) {
+        setError('Réponse non trouvée pour cette question');
+        return;
+      }
+      
+      const response = await fetch(`http://localhost:8080/tentatives/${tentativeEnCorrection.id}/reponses/${question.reponse.id}/corriger-developpement`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          note: note,
+          commentaire: commentaire
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSuccessMessage('Question corrigée avec succès');
+        
+        // Mettre à jour les notes et commentaires locaux
+        setNotesCorrection(prev => ({
+          ...prev,
+          [questionId]: note
+        }));
+        setCommentairesCorrection(prev => ({
+          ...prev,
+          [questionId]: commentaire
+        }));
+        
+        // Recharger la tentative pour voir les changements
+        await corrigerTentative(tentativeEnCorrection.id);
+      } else {
+        const errorData = await response.text();
+        throw new Error(errorData);
+      }
+    } catch (err) {
+      setError('Erreur lors de la correction: ' + err.message);
     }
-  }, [activeTab]);
+  };
 
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(''), 3000);
-      return () => clearTimeout(timer);
+  const verifierExamenTermine = async (examenId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/examens/${examenId}/est-termine`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setExamenTermine(data.termine);
+        return data.termine;
+      }
+      return false;
+    } catch (err) {
+      setError('Erreur lors de la vérification: ' + err.message);
+      return false;
     }
-  }, [successMessage]);
+  };
+
+  const chargerResultatsExamen = async (examenId) => {
+    setLoading(true);
+    try {
+      // Vérifier si l'examen est terminé
+      const termine = await verifierExamenTermine(examenId);
+      if (!termine) {
+        setError('La correction et les résultats ne sont disponibles qu\'après la date de fin de l\'examen.');
+        setLoading(false);
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      
+      // Charger l'examen
+      const examenResponse = await fetch(`http://localhost:8080/examens/${examenId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (examenResponse.ok) {
+        const examenData = await examenResponse.json();
+        setResultatsExamen(examenData);
+        setNotesPubliees(examenData.notesVisibles || false);
+        
+        // Charger toutes les tentatives
+        await chargerToutesLesTentatives(examenId);
+        
+        // Charger les statistiques
+        await chargerStatsCorrection(examenId);
+      }
+    } catch (err) {
+      setError('Erreur lors du chargement des résultats: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const chargerStatsCorrection = async (examenId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/examens/${examenId}/tentatives`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const tentatives = await response.json();
+        
+        const stats = {
+          totalTentatives: tentatives.length,
+          corrigees: tentatives.filter(t => t.estNoteFinaleCalculee).length,
+          aCorriger: tentatives.filter(t => !t.estNoteFinaleCalculee).length,
+          moyenne: 0,
+          meilleureNote: 0,
+          pireNote: 0
+        };
+        
+        const notes = tentatives
+          .filter(t => t.noteFinale !== null && t.noteFinale !== undefined && t.estNoteFinaleCalculee)
+          .map(t => t.noteFinale);
+        
+        if (notes.length > 0) {
+          stats.moyenne = notes.reduce((a, b) => a + b, 0) / notes.length;
+          stats.meilleureNote = Math.max(...notes);
+          stats.pireNote = Math.min(...notes);
+        }
+        
+        setStatsCorrection(stats);
+      }
+    } catch (err) {
+      console.error('Erreur lors du chargement des statistiques:', err);
+      // Fallback aux valeurs par défaut
+      setStatsCorrection({
+        totalTentatives: 0,
+        corrigees: 0,
+        aCorriger: 0,
+        moyenne: 0,
+        meilleureNote: 0,
+        pireNote: 0
+      });
+    }
+  };
+
+  const corrigerAutomatiquement = async (examenId) => {
+    setCorrectionEnCours(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/examens/${examenId}/corriger-automatiquement`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setSuccessMessage('Correction automatique terminée avec succès !');
+        // Recharger les résultats
+        await chargerResultatsExamen(examenId);
+      } else {
+        const errorData = await response.text();
+        throw new Error(errorData);
+      }
+    } catch (err) {
+      setError('Erreur lors de la correction automatique: ' + err.message);
+    } finally {
+      setCorrectionEnCours(false);
+    }
+  };
+
+  const calculerNotesFinales = async (examenId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/examens/${examenId}/calculer-notes-finales`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        setSuccessMessage('Notes finales calculées avec succès !');
+        await chargerResultatsExamen(examenId);
+      } else {
+        const errorData = await response.text();
+        throw new Error(errorData);
+      }
+    } catch (err) {
+      setError('Erreur lors du calcul des notes: ' + err.message);
+    }
+  };
+
+  const publierNotes = async (examenId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/examens/${examenId}/publier-notes`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSuccessMessage('Notes publiées avec succès ! Les étudiants peuvent maintenant voir leurs résultats.');
+        setNotesPubliees(true);
+        setResultatsExamen(prev => ({ ...prev, notesVisibles: true }));
+      } else {
+        const errorData = await response.text();
+        throw new Error(errorData);
+      }
+    } catch (err) {
+      setError('Erreur lors de la publication des notes: ' + err.message);
+    }
+  };
+
+  const masquerNotes = async (examenId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/examens/${examenId}/masquer-notes`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSuccessMessage('Notes masquées avec succès !');
+        setNotesPubliees(false);
+        setResultatsExamen(prev => ({ ...prev, notesVisibles: false }));
+      } else {
+        const errorData = await response.text();
+        throw new Error(errorData);
+      }
+    } catch (err) {
+      setError('Erreur lors du masquage des notes: ' + err.message);
+    }
+  };
+
+  const confirmerAction = (action, examenId) => {
+    setModalAction({ type: action, examenId });
+    setShowConfirmationModal(true);
+  };
+
+  const executerAction = async () => {
+    if (!modalAction) return;
+    
+    switch (modalAction.type) {
+      case 'corriger_auto':
+        await corrigerAutomatiquement(modalAction.examenId);
+        break;
+      case 'calculer_notes':
+        await calculerNotesFinales(modalAction.examenId);
+        break;
+      case 'publier_notes':
+        await publierNotes(modalAction.examenId);
+        break;
+      case 'masquer_notes':
+        await masquerNotes(modalAction.examenId);
+        break;
+    }
+    
+    setShowConfirmationModal(false);
+    setModalAction(null);
+  };
+
+  // Ajoutez ce composant modal pour les confirmations
+  const ConfirmationModal = () => {
+    if (!showConfirmationModal || !modalAction) return null;
+    
+    const messages = {
+      'corriger_auto': {
+        title: 'Lancer la correction automatique',
+        message: 'Êtes-vous sûr de vouloir lancer la correction automatique ? Cette action corrigera toutes les questions à choix des tentatives soumises.',
+        icon: 'refresh'
+      },
+      'calculer_notes': {
+        title: 'Calculer les notes finales',
+        message: 'Cette action calculera les notes finales pour toutes les tentatives. Assurez-vous que toutes les questions à développement ont été corrigées.',
+        icon: 'calculator'
+      },
+      'publier_notes': {
+        title: 'Publier les notes',
+        message: 'Les notes seront visibles par les étudiants. Êtes-vous sûr de vouloir publier les notes ?',
+        icon: 'eye'
+      },
+      'masquer_notes': {
+        title: 'Masquer les notes',
+        message: 'Les notes ne seront plus visibles par les étudiants. Souhaitez-vous continuer ?',
+        icon: 'eye-off'
+      }
+    };
+    
+    const currentMessage = messages[modalAction.type];
+    
+    return (
+      <div className="modal-overlay">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h3>{currentMessage.title}</h3>
+            <button 
+              className="modal-close"
+              onClick={() => setShowConfirmationModal(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="modal-body">
+            <div className="confirmation-message">
+              <Icon type={currentMessage.icon} />
+              <p>{currentMessage.message}</p>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button 
+              className="btn-secondary"
+              onClick={() => setShowConfirmationModal(false)}
+            >
+              Annuler
+            </button>
+            <button 
+              className="btn-primary"
+              onClick={executerAction}
+            >
+              Confirmer
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const CorrectionModal = () => {
+      if (!showCorrectionModal || !tentativeEnCorrection || !questionsTentative) return null;
+
+      // Vérifier si l'examen est terminé
+      const examenTermine = tentativeEnCorrection.examenTermine || 
+                          (tentativeEnCorrection.dateFin && 
+                            new Date(tentativeEnCorrection.dateFin) < new Date());
+
+      if (!examenTermine) {
+          return (
+              <div className="modal-overlay">
+                  <div className="modal-content">
+                      <div className="modal-header">
+                          <h3>Correction non disponible</h3>
+                          <button 
+                              className="modal-close"
+                              onClick={() => setShowCorrectionModal(false)}
+                          >
+                              ×
+                          </button>
+                      </div>
+                      <div className="modal-body">
+                          <div className="info-banner warning">
+                              <Icon type="alert" />
+                              <div>
+                                  <p>La correction n'est disponible qu'après la date de fin de l'examen.</p>
+                                  <p>Date de fin : {formaterDate(tentativeEnCorrection.dateFin)}</p>
+                              </div>
+                          </div>
+                      </div>
+                      <div className="modal-footer">
+                          <button 
+                              className="btn-secondary"
+                              onClick={() => setShowCorrectionModal(false)}
+                          >
+                              Fermer
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          );
+      }
+
+      return (
+          <div className="modal-overlay">
+              <div className="modal-content" style={{ maxWidth: '900px', maxHeight: '90vh' }}>
+                  <div className="modal-header">
+                      <h3>Correction des questions à développement</h3>
+                      <button 
+                          className="modal-close"
+                          onClick={() => setShowCorrectionModal(false)}
+                      >
+                          ×
+                      </button>
+                  </div>
+                  <div className="modal-body">
+                      <div className="tentative-info">
+                          <p><strong>Étudiant:</strong> {tentativeEnCorrection.etudiant?.nom} {tentativeEnCorrection.etudiant?.prenom}</p>
+                          <p><strong>Email:</strong> {tentativeEnCorrection.etudiant?.email}</p>
+                          <p><strong>Date de fin de l'examen:</strong> {formaterDate(tentativeEnCorrection.dateFin)}</p>
+                      </div>
+                      
+                      <div className="info-banner">
+                          <Icon type="info" />
+                          <p>Seules les questions à développement nécessitent une correction manuelle. Les questions à choix sont corrigées automatiquement.</p>
+                      </div>
+                      
+                      <div className="questions-list">
+                          {questionsTentative.map((question, index) => (
+                              <div key={question.id} className="question-card">
+                                  <div className="question-header">
+                                      <span className="question-number">Question {question.ordre}</span>
+                                      <span className="question-type">Développement</span>
+                                      <span className="question-points">{question.bareme} point(s)</span>
+                                  </div>
+                                  <p className="question-enonce">{question.enonce}</p>
+                                  
+                                  <div className="reponse-section">
+                                      <p><strong>Réponse de l'étudiant:</strong></p>
+                                      <div className="reponse-etudiant">
+                                          {question.contenu || 'Aucune réponse'}
+                                      </div>
+                                      
+                                      <div className="correction-form">
+                                          <div className="form-group">
+                                              <label>Note (sur {question.bareme}):</label>
+                                              <input
+                                                  type="number"
+                                                  min="0"
+                                                  max={question.bareme}
+                                                  step="0.5"
+                                                  value={notesCorrection[question.id] || 0}
+                                                  onChange={(e) => setNotesCorrection(prev => ({
+                                                      ...prev,
+                                                      [question.id]: parseFloat(e.target.value) || 0
+                                                  }))}
+                                                  className="note-input"
+                                                  disabled={question.estCorrigee}
+                                              />
+                                              {question.estCorrigee && (
+                                                  <span className="badge-success" style={{ marginLeft: '10px' }}>
+                                                      <Icon type="check" />
+                                                      Déjà corrigée
+                                                  </span>
+                                              )}
+                                          </div>
+                                          <div className="form-group">
+                                              <label>Commentaire:</label>
+                                              <textarea
+                                                  rows="3"
+                                                  value={commentairesCorrection[question.id] || ''}
+                                                  onChange={(e) => setCommentairesCorrection(prev => ({
+                                                      ...prev,
+                                                      [question.id]: e.target.value
+                                                  }))}
+                                                  className="commentaire-input"
+                                                  placeholder="Ajouter un commentaire..."
+                                                  disabled={question.estCorrigee}
+                                              />
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+                  <div className="modal-footer">
+                      <button 
+                          className="btn-secondary"
+                          onClick={() => setShowCorrectionModal(false)}
+                      >
+                          Annuler
+                      </button>
+                      <button 
+                          className="btn-success"
+                          onClick={() => soumettreCorrectionDeveloppement(tentativeEnCorrection.tentativeId)}
+                      >
+                          Enregistrer les corrections
+                      </button>
+                  </div>
+              </div>
+          </div>
+      );
+  };
 
   // Fonctions pour les icônes
   const Icon = ({ type, className = '' }) => {
@@ -672,11 +1263,25 @@ const EnseignantDashboard = () => {
       refresh: '🔄',
       filter: '🔍',
       download: '📥',
-      star: '⭐'
+      star: '⭐',
+      'eye-off': '👁️‍🗨️'
     };
     
     return <span className={`icon ${className}`}>{icons[type]}</span>;
   };
+
+  useEffect(() => {
+    if (activeTab === 'mes-examens') {
+      chargerExamens();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(''), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   return (
     <div className="enseignant-dashboard">
@@ -722,9 +1327,253 @@ const EnseignantDashboard = () => {
           <Icon type="check" />
           <span>À corriger</span>
         </button>
+        <button 
+          className={activeTab === 'resultats-correction' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('resultats-correction')}
+        >
+          <Icon type="star" />
+          <span>Résultats & correction</span>
+        </button>
       </div>
 
       <div className="tab-content">
+        
+        {activeTab === 'resultats-correction' && (
+          <div className="resultats-correction">
+            <div className="section-header">
+              <h2>Résultats et correction des examens</h2>
+              <div className="filter-section">
+                <div className="filter-row">
+                  <select 
+                    value={resultatsExamen?.id || ''}
+                    onChange={async (e) => {
+                      const examenId = e.target.value;
+                      if (examenId) {
+                        await chargerResultatsExamen(examenId);
+                      } else {
+                        setResultatsExamen(null);
+                        setExamenTermine(false);
+                      }
+                    }}
+                    className="examen-select"
+                  >
+                    <option value="">Sélectionnez un examen</option>
+                    {examens.map(examen => (
+                      <option key={examen.id} value={examen.id}>
+                        {examen.titre} - {examen.etat || 'BROUILLON'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {loading && (
+              <div className="loading">
+                <div className="spinner"></div>
+                <p>Chargement des résultats...</p>
+              </div>
+            )}
+
+            {resultatsExamen && (
+              <>
+                {!examenTermine ? (
+                  <div className="info-banner warning">
+                    <Icon type="alert" />
+                    <div>
+                      <strong>Examen non terminé</strong>
+                      <p>
+                        La correction et les résultats ne sont disponibles qu'après la date de fin de l'examen. 
+                        Date de fin : {formaterDate(resultatsExamen.dateFin)}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="examen-info-card">
+                      <h3>{resultatsExamen.titre}</h3>
+                      <p>{resultatsExamen.description}</p>
+                      
+                      <div className="examen-info-row">
+                        <div className="examen-info-item">
+                          <span className="examen-info-label">Date de fin</span>
+                          <span className="examen-info-value">{formaterDate(resultatsExamen.dateFin)}</span>
+                        </div>
+                        <div className="examen-info-item">
+                          <span className="examen-info-label">Statut</span>
+                          <span className="examen-info-value">
+                            <span className={`statut-badge statut-${resultatsExamen.etat?.toLowerCase()}`}>
+                              {resultatsExamen.etat}
+                            </span>
+                          </span>
+                        </div>
+                        <div className="examen-info-item">
+                          <span className="examen-info-label">Notes visibles</span>
+                          <span className="examen-info-value">
+                            <span className={`toggle-status ${notesPubliees ? 'status-published' : 'status-hidden'}`}>
+                              {notesPubliees ? 'Publiées' : 'Masquées'}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="correction-stats">
+                      <div className="stat-card">
+                        <div className="stat-label">Tentatives totales</div>
+                        <div className="stat-value">{statsCorrection.totalTentatives}</div>
+                      </div>
+                      <div className="stat-card success">
+                        <div className="stat-label">Tentatives corrigées</div>
+                        <div className="stat-value">{statsCorrection.corrigees}</div>
+                      </div>
+                      <div className="stat-card warning">
+                        <div className="stat-label">À corriger</div>
+                        <div className="stat-value">{statsCorrection.aCorriger}</div>
+                      </div>
+                      <div className="stat-card">
+                        <div className="stat-label">Moyenne générale</div>
+                        <div className="stat-value">{statsCorrection.moyenne.toFixed(2)}</div>
+                      </div>
+                    </div>
+
+                    <div className="action-buttons-row">
+                      <button 
+                        className="btn-success"
+                        onClick={() => confirmerAction('corriger_auto', resultatsExamen.id)}
+                        disabled={correctionEnCours}
+                      >
+                        <Icon type="refresh" />
+                        {correctionEnCours ? 'Correction en cours...' : 'Correction automatique'}
+                      </button>
+                      
+                      <button 
+                        className="btn-primary"
+                        onClick={() => confirmerAction('calculer_notes', resultatsExamen.id)}
+                        disabled={correctionEnCours}
+                      >
+                        <Icon type="calculator" />
+                        Calculer notes finales
+                      </button>
+                      
+                      {notesPubliees ? (
+                          <button 
+                              className="btn-warning"
+                              onClick={() => confirmerAction('masquer_notes', resultatsExamen.id)}
+                          >
+                              <Icon type="eye-off" />
+                              Masquer les notes
+                          </button>
+                      ) : (
+                          <button 
+                              className="btn-info"
+                              onClick={() => confirmerAction('publier_notes', resultatsExamen.id)}
+                              disabled={!examenTermine || !resultatsExamen?.dateFin || new Date(resultatsExamen.dateFin) > new Date()}
+                              title={!examenTermine ? "La publication n'est disponible qu'après la date de fin de l'examen" : ""}
+                          >
+                              <Icon type="eye" />
+                              {!examenTermine ? "Publication indisponible" : "Publier les notes"}
+                          </button>
+                      )}
+                    </div>
+
+                    <div className="tentatives-table">
+                      <div className="table-header">
+                        <h3>Tentatives des étudiants ({tentatives.length})</h3>
+                        <div className="table-actions">
+                          <button 
+                            className="btn-secondary btn-sm"
+                            onClick={() => resultatsExamen && chargerToutesLesTentatives(resultatsExamen.id)}
+                          >
+                            <Icon type="refresh" />
+                            Rafraîchir
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {tentatives.length === 0 ? (
+                        <div className="empty-state">
+                          <Icon type="users" className="empty-icon" />
+                          <p>Aucune tentative soumise pour cet examen</p>
+                        </div>
+                      ) : (
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Étudiant</th>
+                              <th>Email</th>
+                              <th>Date soumission</th>
+                              <th>Statut</th>
+                              <th>Note</th>
+                              <th>Correction</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tentatives.map(tentative => (
+                              <tr key={tentative.id}>
+                                <td>{tentative.etudiant}</td>
+                                <td>{tentative.email}</td>
+                                <td>{formaterDate(tentative.dateSoumission)}</td>
+                                <td>
+                                  <span className={`statut-badge statut-${tentative.statut?.toLowerCase()}`}>
+                                    {tentative.statut}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className={`score-display ${tentative.noteFinale > 0 ? 'score-positif' : 'score-zero'}`}>
+                                    {tentative.estNoteFinaleCalculee ? tentative.noteFinale.toFixed(1) : 'N/A'}
+                                    {tentative.estNoteFinaleCalculee && <Icon type="check" className="score-icon" />}
+                                  </span>
+                                </td>
+                                <td>
+                                  {tentative.estNoteFinaleCalculee ? (
+                                    <span className="badge-success">
+                                      <Icon type="check" />
+                                      Corrigée
+                                    </span>
+                                  ) : (
+                                    <span className="badge-warning">
+                                      <Icon type="alert" />
+                                      À corriger
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  <div className="action-buttons">
+                                    <button 
+                                      className="btn-primary btn-sm"
+                                      onClick={() => corrigerTentative(tentative.id)}
+                                    >
+                                      <Icon type="edit" />
+                                      {tentative.estNoteFinaleCalculee ? 'Voir' : 'Corriger'}
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {!resultatsExamen && !loading && (
+              <div className="empty-state">
+                <Icon type="star" className="empty-icon" />
+                <p>Sélectionnez un examen pour voir les résultats et gérer la correction</p>
+                <p className="subtext">
+                  Cette fonctionnalité permet de gérer les résultats après la date de fin d'un examen, 
+                  y compris la correction automatique, le calcul des notes et la publication des résultats.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
 
         {activeTab === 'mes-examens' && (
           <div className="mes-examens">
@@ -1524,35 +2373,25 @@ const EnseignantDashboard = () => {
                           <th>Étudiant</th>
                           <th>Email</th>
                           <th>Date de soumission</th>
-                          <th>Statut</th>
-                          <th>Score actuel</th>
-                          <th>Questions répondues</th>
                           <th>Questions à corriger</th>
+                          <th>Note actuelle</th>
                           <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {tentativesACorriger.map(tentative => (
                           <tr key={tentative.id}>
-                            <td>{tentative.etudiant || 'Inconnu'}</td>
-                            <td>{tentative.email || 'Non disponible'}</td>
+                            <td>{tentative.etudiantNom}</td>
+                            <td>{tentative.etudiantEmail}</td>
                             <td>{formaterDate(tentative.dateSoumission)}</td>
                             <td>
-                              <span className={`statut-badge statut-${tentative.statut?.toLowerCase()}`}>
-                                {tentative.statut}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={tentative.scoreActuel > 0 ? 'score-positif' : 'score-zero'}>
-                                {tentative.scoreActuel || 0}
-                              </span>
-                            </td>
-                            <td>
-                              {tentative.nombreQuestionsRepondues || 0} / {tentative.nombreQuestionsTotal || 0}
-                            </td>
-                            <td>
                               <span className="badge-avertissement">
-                                {tentative.questionsDevNonCorrigees || 1} question(s)
+                                {tentative.questionsDevNonCorrigees} question(s)
+                              </span>
+                            </td>
+                            <td>
+                              <span className={tentative.noteFinale > 0 ? 'score-positif' : 'score-zero'}>
+                                {tentative.noteFinale || 0}
                               </span>
                             </td>
                             <td>
@@ -1597,8 +2436,7 @@ const EnseignantDashboard = () => {
                           <th>Email</th>
                           <th>Date de soumission</th>
                           <th>Statut</th>
-                          <th>Score</th>
-                          <th>Questions répondues</th>
+                          <th>Note</th>
                           <th>Correction</th>
                           <th>Actions</th>
                         </tr>
@@ -1615,16 +2453,13 @@ const EnseignantDashboard = () => {
                               </span>
                             </td>
                             <td>
-                              <span className={`score-display ${tentative.score > 0 ? 'score-positif' : 'score-zero'}`}>
-                                {tentative.score.toFixed(1)}
-                                {tentative.estCorrigee && <Icon type="check" className="score-icon" />}
+                              <span className={`score-display ${tentative.noteFinale > 0 ? 'score-positif' : 'score-zero'}`}>
+                                {tentative.estNoteFinaleCalculee ? tentative.noteFinale.toFixed(1) : 'N/A'}
+                                {tentative.estNoteFinaleCalculee && <Icon type="check" className="score-icon" />}
                               </span>
                             </td>
                             <td>
-                              {tentative.nombreQuestionsRepondues} / {tentative.nombreQuestionsTotal}
-                            </td>
-                            <td>
-                              {tentative.estCorrigee ? (
+                              {tentative.estNoteFinaleCalculee ? (
                                 <span className="badge-success">
                                   <Icon type="check" />
                                   Corrigée
@@ -1643,16 +2478,7 @@ const EnseignantDashboard = () => {
                                   onClick={() => corrigerTentative(tentative.id)}
                                 >
                                   <Icon type="edit" />
-                                  {tentative.estCorrigee ? 'Voir' : 'Corriger'}
-                                </button>
-                                <button 
-                                  className="btn-secondary btn-sm"
-                                  onClick={() => {
-                                    window.location.href = `/tentative/${tentative.id}`;
-                                  }}
-                                  title="Voir les détails"
-                                >
-                                  <Icon type="eye" />
+                                  {tentative.estNoteFinaleCalculee ? 'Voir' : 'Corriger'}
                                 </button>
                               </div>
                             </td>
@@ -1675,6 +2501,8 @@ const EnseignantDashboard = () => {
           </div>
         )}
       </div>
+      <ConfirmationModal />
+      <CorrectionModal />
     </div>
   );
 };
