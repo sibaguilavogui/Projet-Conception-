@@ -185,27 +185,6 @@ public class Tentative {
         verifierEtMettreAJourCorrection();
     }
 
-    public void appliquerNoteManuelle(UUID questionId, double note) {
-        noterManuellement(questionId, note, null);
-    }
-
-    public double calculerScoreAuto() {
-        return reponses.stream()
-                .filter(r -> r.getQuestion().getType().equals("CHOIX"))
-                .mapToDouble(r -> {
-                    if (r.getQuestion().getType().equals("CHOIX")) {
-                        QuestionAChoix question = (QuestionAChoix) r.getQuestion();
-                        try {
-                            return question.calculerNote(r);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                    return 0.0;
-                })
-                .sum();
-    }
-
     public void calculerNoteFinale() {
         this.noteFinale = this.reponses.stream()
                 .mapToDouble(ReponseDonnee::getNotePartielle)
@@ -247,14 +226,6 @@ public class Tentative {
         return statut == StatutTentative.SOUMISE;
     }
 
-    public boolean peutEtreCorrigee() {
-        return estCompletee() && !estCorrigee;
-    }
-
-    public int getNombreReponses() {
-        return reponses.size();
-    }
-
     public boolean toutesLesReponsesSontCorrigees() {
         if (reponses == null || reponses.isEmpty()) {
             return true;
@@ -268,7 +239,6 @@ public class Tentative {
         return true;
     }
 
-    // Méthode pour synchroniser l'état estCorrigee avec les réponses
     public void verifierEtMettreAJourCorrection() {
         this.estCorrigee = toutesLesReponsesSontCorrigees();
         if (estCorrigee && this.dateCalculNote == null) {
@@ -287,15 +257,6 @@ public class Tentative {
         return totalQuestions > 0 ? (double) getNombreQuestionsRepondues() / totalQuestions * 100 : 0;
     }
 
-    public boolean peutEtreReprise() {
-        return statut == StatutTentative.EN_COURS && !estExpiree();
-    }
-
-    public void mettreAJourDateModification() {
-        this.dateModification = LocalDateTime.now();
-    }
-
-    // Getters et Setters
     public UUID getId() {
         return id;
     }
@@ -387,13 +348,6 @@ public class Tentative {
         }
     }
 
-    public void removeReponse(ReponseDonnee reponse) {
-        if (reponse != null) {
-            this.reponses.remove(reponse);
-            this.dateModification = LocalDateTime.now();
-        }
-    }
-
     public LocalDateTime getDateCreation() {
         return dateCreation;
     }
@@ -411,10 +365,7 @@ public class Tentative {
     }
 
     public double getNoteFinale() {
-        if(examen.isNotesVisibles()){
-            return noteFinale;
-        }
-        throw new IllegalStateException("Les résultats ne sont pas visible");
+        return noteFinale;
     }
 
     public void setNoteFinale(double noteFinale) {
@@ -439,40 +390,6 @@ public class Tentative {
         this.dateCalculNote = dateCalculNote;
     }
 
-    public Map<String, Object> getInfosPourComposition() {
-        Map<String, Object> infos = new HashMap<>();
-
-        infos.put("id", id);
-        infos.put("debut", debut);
-        infos.put("fin", fin);
-        infos.put("statut", statut);
-        infos.put("estExpiree", estExpiree());
-        infos.put("tempsRestant", tempsRestant());
-        infos.put("estCorrigee", estCorrigee);
-        infos.put("dateSoumission", dateSoumission);
-
-        // Infos sur l'étudiant (limitées)
-        Map<String, Object> etudiantInfo = new HashMap<>();
-        etudiantInfo.put("id", etudiant.getId());
-        etudiantInfo.put("nomComplet", etudiant.getNom() + " " + etudiant.getPrenom());
-        infos.put("etudiant", etudiantInfo);
-
-        // Infos sur l'examen (limitées)
-        Map<String, Object> examenInfo = new HashMap<>();
-        examenInfo.put("id", examen.getId());
-        examenInfo.put("titre", examen.getTitre());
-        examenInfo.put("description", examen.getDescription());
-        examenInfo.put("dureeMinutes", examen.getDureeMinutes());
-        examenInfo.put("nombreQuestions", examen.getQuestions().size());
-        examenInfo.put("barèmeTotal", examen.totalPoints());
-        infos.put("examen", examenInfo);
-
-        // Progression
-        infos.put("nombreQuestionsRepondues", getNombreQuestionsRepondues());
-        infos.put("pourcentageCompletion", getPourcentageCompletion());
-
-        return infos;
-    }
 
     // Méthodes de cycle de vie JPA
     @PrePersist

@@ -1,11 +1,9 @@
 package ca.uqac.examgu.service;
 
 import ca.uqac.examgu.model.*;
-import ca.uqac.examgu.model.Enumerations.TypeEvenement;
 import ca.uqac.examgu.repository.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -16,7 +14,6 @@ import java.util.UUID;
 @Service
 public class EnseignantService {
 
-    private final JournalisationService journalisationService;
     private final UtilisateurRepository utilisateurRepository;
     private final EnseignantRepository enseignantRepository;
     private final PasswordEncoder passwordEncoder;
@@ -25,10 +22,10 @@ public class EnseignantService {
     private final TentativeRepository tentativeRepository;
     private final QuestionRepository questionRepository;
 
-    public EnseignantService(JournalisationService journalisationService, UtilisateurRepository utilisateurRepository,
-                             EnseignantRepository enseignantRepository, PasswordEncoder passwordEncoder, ExamenRepository examenRepository, InscriptionRepository inscriptionRepository, TentativeRepository tentativeRepository, QuestionRepository questionRepository) {
+    public EnseignantService(UtilisateurRepository utilisateurRepository, EnseignantRepository enseignantRepository, PasswordEncoder passwordEncoder,
+                             ExamenRepository examenRepository, InscriptionRepository inscriptionRepository,
+                             TentativeRepository tentativeRepository, QuestionRepository questionRepository) {
         this.enseignantRepository = enseignantRepository;
-        this.journalisationService = journalisationService;
         this.utilisateurRepository = utilisateurRepository;
         this.passwordEncoder = passwordEncoder;
         this.examenRepository = examenRepository;
@@ -79,12 +76,6 @@ public class EnseignantService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erreur lors de la création du compte: " + e.getMessage());
         }
-    }
-
-    private Utilisateur getEnseignantCourant() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Optional<Utilisateur> u= utilisateurRepository.findByEmail(email);
-        return u.orElse(null);
     }
 
     public void supprimerEnseignant(UUID id) {

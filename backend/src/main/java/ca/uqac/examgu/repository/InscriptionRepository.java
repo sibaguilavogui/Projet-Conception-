@@ -10,8 +10,6 @@ import java.util.UUID;
 
 public interface InscriptionRepository extends JpaRepository<Inscription, Long> {
     List<Inscription> findByEtudiantId(UUID etudiantId);
-    List<Inscription> findByExamenId(UUID examenId);
-
     Optional<Inscription> findByExamenIdAndEtudiantId(UUID examenId, UUID etudiantId);
 
     void deleteByExamen(Examen examen);

@@ -385,6 +385,13 @@ const EtudiantDashboard = () => {
 
   const consulterResultatExamen = async (examen) => {
     try {
+
+      const notesVisibles = await verifierNotesVisibles(examen.id);
+      
+      if (!notesVisibles) {
+        setError('Les résultats ne sont pas encore disponibles');
+        return;
+      }
       const token = localStorage.getItem('token');
       
       // Étape 1: Vérifier l'existence d'une tentative
@@ -641,61 +648,10 @@ const EtudiantDashboard = () => {
               <h3 style={{ marginBottom: '1rem', color: '#333' }}>Votre Score</h3>
               <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#17a2b8', marginBottom: '0.5rem' }}>
                 {tentativeResultat.note?.toFixed(1) || '0.0'}
-                <span style={{ fontSize: '1.5rem', color: '#6c757d' }}>
-                  /{examenResultat.totalPoints || '?'}
-                </span>
               </div>
-              <div style={{ fontSize: '1.2rem', color: '#495057' }}>
-                {examenResultat.totalPoints ? 
-                  `${((tentativeResultat.note / examenResultat.totalPoints) * 100).toFixed(1)}%` : 
-                  'N/A'}
-              </div>
+             
             </div>
-            
-            <div className="commentaires-section" style={{ marginTop: '2rem' }}>
-              <h3 style={{ marginBottom: '1rem', color: '#333' }}>Commentaires</h3>
-              {tentativeResultat.commentaires && tentativeResultat.commentaires.length > 0 ? (
-                <div className="commentaires-list" style={{
-                  backgroundColor: 'white',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '8px',
-                  padding: '1.5rem'
-                }}>
-                  {tentativeResultat.commentaires.map((commentaire, index) => (
-                    <div key={index} style={{
-                      padding: '1rem',
-                      borderBottom: index < tentativeResultat.commentaires.length - 1 ? '1px solid #e9ecef' : 'none',
-                      backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <strong style={{ color: '#495057' }}>Question {commentaire.questionNumero || index + 1}</strong>
-                        <span style={{ 
-                          backgroundColor: commentaire.pointsObtenus > 0 ? '#d1e7dd' : '#f8d7da',
-                          color: commentaire.pointsObtenus > 0 ? '#0f5132' : '#842029',
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '20px',
-                          fontSize: '0.85rem'
-                        }}>
-                          {commentaire.pointsObtenus || 0}/{commentaire.pointsMax || '?'} pts
-                        </span>
-                      </div>
-                      <div style={{ color: '#666', fontSize: '0.95rem' }}>
-                        {commentaire.texte || 'Aucun commentaire spécifique'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-state" style={{ 
-                  textAlign: 'center', 
-                  padding: '2rem',
-                  color: '#6c757d'
-                }}>
-                  <Icon type="info" style={{ fontSize: '2rem', marginBottom: '1rem' }} />
-                  <p>Aucun commentaire disponible</p>
-                </div>
-              )}
-            </div>
+        
           </div>
         ) : (
           <div className="loading" style={{ textAlign: 'center', padding: '3rem' }}>
@@ -813,6 +769,7 @@ const EtudiantDashboard = () => {
                           className="btn-info"
                           onClick={() => consulterResultatExamen(examen)}
                           title="Consulter mes résultats"
+                          disabled={!examen.notesVisibles}
                         >
                           <Icon type="eye" />
                           Consulter les résultats
@@ -948,6 +905,8 @@ const EtudiantDashboard = () => {
                                   setError(err.message);
                                 }
                               }}
+                              title={resultat.examen?.notesVisibles ? "Voir les détails" : "Les résultats ne sont pas encore disponibles"}
+                              disabled={!resultat.examen?.notesVisibles}
                             >
                               <Icon type="eye" />
                               Détails

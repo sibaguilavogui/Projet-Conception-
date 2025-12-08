@@ -17,7 +17,7 @@ public class EtudiantController {
 
     private final EtudiantService etudiantService;
 
-    public EtudiantController(EtudiantService etudiantService, EtudiantRepository etudiantRepository) {
+    public EtudiantController(EtudiantService etudiantService) {
         this.etudiantService = etudiantService;
     }
 

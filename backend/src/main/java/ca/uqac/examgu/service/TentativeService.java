@@ -5,8 +5,6 @@ import ca.uqac.examgu.model.Enumerations.StatutTentative;
 import ca.uqac.examgu.repository.EtudiantRepository;
 import ca.uqac.examgu.repository.TentativeRepository;
 import ca.uqac.examgu.repository.ExamenRepository;
-import ca.uqac.examgu.repository.UtilisateurRepository;
-import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -150,38 +148,6 @@ public class TentativeService {
         return tentativeRepository.findByExamenId(examenId);
     }
 
-    public List<Tentative> getTentativesACorriger(UUID examenId, UUID enseignantId) {
-        Examen examen = examenRepository.findById(examenId)
-                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
-
-        if (!examen.getCreateur().getId().equals(enseignantId)) {
-            throw new SecurityException("Seul le créateur de l'examen peut voir les tentatives à corriger");
-        }
-
-        List<Tentative> toutesTentatives = tentativeRepository.findByExamenId(examenId);
-
-        return toutesTentatives.stream()
-                .filter(tentative -> {
-                    if (tentative.getStatut() != StatutTentative.SOUMISE) {
-                        return false;
-                    }
-
-                    if (tentative.isEstCorrigee()) {
-                        return false;
-                    }
-
-                    return tentative.getReponses().stream()
-                            .anyMatch(reponse -> {
-                                if (reponse.estQuestionDeveloppement() && !reponse.isEstCorrigee()) {
-                                    return true;
-                                }
-                                return false;
-                            });
-                })
-                .sorted(Comparator.comparing(Tentative::getDateSoumission))
-                .collect(Collectors.toList());
-    }
-
     public Tentative getTentativePourCorrection(UUID tentativeId, UUID enseignantId) {
         Tentative tentative = tentativeRepository.findById(tentativeId)
                 .orElseThrow(() -> new RuntimeException("Tentative non trouvée"));
@@ -222,8 +188,8 @@ public class TentativeService {
 
 
     public Tentative corrigerQuestionDeveloppement(UUID tentativeId, UUID reponseId,
-                                                       double note, String commentaire,
-                                                       UUID enseignantId) {
+                                                   double note, String commentaire,
+                                                   UUID enseignantId) {
         Tentative tentative = getTentativePourCorrection(tentativeId, enseignantId);
 
         ReponseDonnee reponse = tentative.getReponses().stream()
@@ -297,8 +263,4 @@ public class TentativeService {
         }
     }
 
-
-    public List<Tentative> getTents(){
-        return tentativeRepository.findAll();
-    }
 }

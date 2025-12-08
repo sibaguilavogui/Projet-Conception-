@@ -21,12 +21,10 @@ import java.util.stream.Collectors;
 public class ExamenService {
 
     private final ExamenRepository examenRepository;
-    private final JournalisationService journalisationService;
     private final TentativeRepository tentativeRepository;
 
-    public ExamenService(ExamenRepository repo, ExamenRepository examenRepository, JournalisationService journalisationService, TentativeRepository tentativeRepository) {
+    public ExamenService(ExamenRepository examenRepository, TentativeRepository tentativeRepository) {
         this.examenRepository = examenRepository;
-        this.journalisationService = journalisationService;
         this.tentativeRepository = tentativeRepository;
     }
 
@@ -160,7 +158,7 @@ public class ExamenService {
             }
             return tentative.getNoteFinale();
         }
-        return -1;
+        throw new RuntimeException("Resultat indisponible");
     }
 
 
@@ -231,32 +229,6 @@ public class ExamenService {
         return examenRepository.save(examen);
     }
 
-    public boolean estExamenTermine(UUID examenId) {
-        Examen examen = examenRepository.findById(examenId)
-                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
-
-        if (examen.getDateFin() == null) {
-            return false;
-        }
-
-        return examen.getDateFin().isBefore(LocalDateTime.now());
-    }
-
-    public List<UUID> getTentativesNonCorrigees(UUID examenId, UUID enseignantId) {
-        Examen examen = examenRepository.findById(examenId)
-                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
-
-        if (!examen.getCreateur().getId().equals(enseignantId)) {
-            throw new SecurityException("Seul le créateur de l'examen peut voir les tentatives non corrigées");
-        }
-
-        List<Tentative> tentatives = tentativeRepository.findByExamenId(examenId);
-
-        return tentatives.stream()
-                .filter(t -> !t.isEstCorrigee())
-                .map(Tentative::getId)
-                .collect(Collectors.toList());
-    }
 
     public boolean estExamenTotalementCorrige(UUID examenId, UUID enseignantId) {
         Examen examen = examenRepository.findById(examenId)

@@ -2,50 +2,30 @@ package ca.uqac.examgu.service;
 
 import ca.uqac.examgu.dto.EtudiantDTO;
 import ca.uqac.examgu.model.*;
-import ca.uqac.examgu.model.Enumerations.Role;
-import ca.uqac.examgu.model.Enumerations.StatutTentative;
-import ca.uqac.examgu.model.Enumerations.TypeEvenement;
 import ca.uqac.examgu.repository.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class EtudiantService {
 
-    private final ExamenRepository examenRepo;
-    private final JournalisationService journalisationService;
     private final UtilisateurRepository utilisateurRepository;
     private final EtudiantRepository etudiantRepository;
-    private final EnseignantRepository enseignantRepository;
     private final InscriptionRepository inscriptionRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public EtudiantService(ExamenRepository examenRepo,  JournalisationService journalisationService,
-                           UtilisateurRepository utilisateurRepository, EtudiantRepository etudiantRepository,
-                           EnseignantRepository enseignantRepository, InscriptionRepository inscriptionRepository,
-                           PasswordEncoder passwordEncoder) {
-        this.examenRepo = examenRepo;
-        this.journalisationService = journalisationService;
+    public EtudiantService(UtilisateurRepository utilisateurRepository, EtudiantRepository etudiantRepository,
+                           InscriptionRepository inscriptionRepository, PasswordEncoder passwordEncoder) {
         this.utilisateurRepository = utilisateurRepository;
         this.etudiantRepository = etudiantRepository;
-        this.enseignantRepository = enseignantRepository;
         this.inscriptionRepository = inscriptionRepository;
         this.passwordEncoder = passwordEncoder;
-    }
-
-    private Utilisateur getEtudiantCourant() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Optional<Utilisateur> u= utilisateurRepository.findByEmail(email);
-        return u.orElse(null);
     }
 
     public List<Etudiant> listerEtudiants() {
@@ -123,10 +103,6 @@ public class EtudiantService {
         }
     }
 
-
-    public List<Inscription> getInscriptionsEtudiant(UUID etudiantId) {
-        return inscriptionRepository.findByEtudiantId(etudiantId);
-    }
 
     public Optional<Etudiant> findByEmail(String email) {
         return etudiantRepository.findByEmail(email);

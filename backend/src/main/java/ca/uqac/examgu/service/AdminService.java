@@ -17,16 +17,12 @@ public class AdminService {
     private final UtilisateurRepository utilisateurRepository;
     private final LogEntryRepository logEntryRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JournalisationService journalisationService;
 
-    public AdminService(UtilisateurRepository utilisateurRepository,
-                        LogEntryRepository logEntryRepository,
-                        PasswordEncoder passwordEncoder,
-                        JournalisationService journalisationService) {
+    public AdminService(UtilisateurRepository utilisateurRepository, LogEntryRepository logEntryRepository,
+                        PasswordEncoder passwordEncoder) {
         this.utilisateurRepository = utilisateurRepository;
         this.logEntryRepository = logEntryRepository;
         this.passwordEncoder = passwordEncoder;
-        this.journalisationService = journalisationService;
     }
 
     public Admin getAdminSingleton() {

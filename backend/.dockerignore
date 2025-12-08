@@ -1,0 +1,28 @@
+# Ignorer les fichiers de build
+target/
+build/
+out/
+bin/
+
+# Ignorer les fichiers IDE
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+
+# Ignorer les fichiers système
+.DS_Store
+Thumbs.db
+
+# Ignorer les fichiers Git
+.git/
+.gitignore
+
+# Ignorer les fichiers logs
+*.log
+logs/
+
+# Ignorer les fichiers de configuration spécifiques à l'environnement de dev
+application-dev.properties
+application-local.properties

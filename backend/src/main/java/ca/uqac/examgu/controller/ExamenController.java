@@ -4,7 +4,6 @@ import ca.uqac.examgu.dto.ExamenDTO;
 import ca.uqac.examgu.dto.QuestionAChoixDTO;
 import ca.uqac.examgu.dto.QuestionADeveloppementDTO;
 import ca.uqac.examgu.model.*;
-import ca.uqac.examgu.model.Enumerations.EtatExamen;
 import ca.uqac.examgu.repository.TentativeRepository;
 import ca.uqac.examgu.service.*;
 import org.springframework.http.HttpStatus;
@@ -231,8 +230,8 @@ public class ExamenController {
     @PutMapping("/{examenId}")
     @PreAuthorize("hasRole('ENSEIGNANT')")
     public ResponseEntity<?> modifierExamen(@PathVariable UUID examenId,
-                                                         @RequestBody ExamenDTO request,
-                                                         Authentication authentication) {
+                                            @RequestBody ExamenDTO request,
+                                            Authentication authentication) {
         try {
             String email = authentication.getName();
             Optional<Enseignant> enseignantOpt = enseignantService.findByEmail(email);
@@ -263,8 +262,8 @@ public class ExamenController {
     @PutMapping("/{examenId}/planifier")
     @PreAuthorize("hasRole('ENSEIGNANT')")
     public ResponseEntity<?> planifierExamen(@PathVariable UUID examenId,
-                                            @RequestBody ExamenDTO request,
-                                            Authentication authentication){
+                                             @RequestBody ExamenDTO request,
+                                             Authentication authentication){
         try {
             String email = authentication.getName();
             Optional<Enseignant> enseignantOpt = enseignantService.findByEmail(email);
@@ -775,89 +774,6 @@ public class ExamenController {
     }
 
 
-    @GetMapping("/{examenId}/statistiques-correction")
-    @PreAuthorize("hasRole('ENSEIGNANT')")
-    public ResponseEntity<?> getStatistiquesCorrection(@PathVariable UUID examenId, Authentication auth) {
-        try {
-            UUID enseignantId = getEnseignantCourantId(auth);
-            Examen examen = examenService.trouverParId(examenId)
-                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
-
-            if (!examen.getCreateur().getId().equals(enseignantId)) {
-                return ResponseEntity.status(403).body("Accès refusé");
-            }
-
-            // Récupérer toutes les tentatives
-            List<Tentative> tentatives = tentativeRepository.findByExamenId(examenId);
-
-            // Calculer les statistiques
-            long totalTentatives = tentatives.size();
-            long corrigees = tentatives.stream()
-                    .filter(t -> t.isEstNoteFinaleCalculee())
-                    .count();
-            long aCorriger = totalTentatives - corrigees;
-
-            // Calculer la moyenne
-            double moyenne = tentatives.stream()
-                    .filter(t -> t.isEstNoteFinaleCalculee())
-                    .mapToDouble(Tentative::getNoteFinale)
-                    .average()
-                    .orElse(0.0);
-
-            // Meilleure et pire note
-            double meilleureNote = tentatives.stream()
-                    .filter(t -> t.isEstNoteFinaleCalculee())
-                    .mapToDouble(Tentative::getNoteFinale)
-                    .max()
-                    .orElse(0.0);
-
-            double pireNote = tentatives.stream()
-                    .filter(t -> t.isEstNoteFinaleCalculee())
-                    .mapToDouble(Tentative::getNoteFinale)
-                    .min()
-                    .orElse(0.0);
-
-            Map<String, Object> stats = new HashMap<>();
-            stats.put("totalTentatives", totalTentatives);
-            stats.put("corrigees", corrigees);
-            stats.put("aCorriger", aCorriger);
-            stats.put("moyenne", moyenne);
-            stats.put("meilleureNote", meilleureNote);
-            stats.put("pireNote", pireNote);
-
-            return ResponseEntity.ok(stats);
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
-        }
-    }
-
-
-    @GetMapping("/{examenId}/statut-publication")
-    @PreAuthorize("hasRole('ENSEIGNANT')")
-    public ResponseEntity<?> getStatutPublicationNotes(@PathVariable UUID examenId, Authentication auth) {
-        try {
-            UUID enseignantId = getEnseignantCourantId(auth);
-            Examen examen = examenService.trouverParId(examenId)
-                    .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
-
-            if (!examen.getCreateur().getId().equals(enseignantId)) {
-                return ResponseEntity.status(403).body("Accès refusé");
-            }
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("notesVisibles", examen.isNotesVisibles());
-            response.put("datePublication", examen.getDatePublicationNotes());
-            response.put("examenId", examenId);
-            response.put("titre", examen.getTitre());
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
-        }
-    }
-
 
     @GetMapping("/{examenId}/tentatives-non-corrigees")
     @PreAuthorize("hasRole('ENSEIGNANT')")
@@ -896,6 +812,7 @@ public class ExamenController {
             return ResponseEntity.badRequest().body("Erreur: " + e.getMessage());
         }
     }
+
 
     @GetMapping("/{examenId}/est-totalement-corrige")
     @PreAuthorize("hasRole('ENSEIGNANT')")
@@ -1063,4 +980,3 @@ public class ExamenController {
         return etudiant.getId();
     }
 }
-

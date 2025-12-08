@@ -1203,20 +1203,7 @@ const EnseignantDashboard = () => {
                                                   </span>
                                               )}
                                           </div>
-                                          <div className="form-group">
-                                              <label>Commentaire:</label>
-                                              <textarea
-                                                  rows="3"
-                                                  value={commentairesCorrection[question.id] || ''}
-                                                  onChange={(e) => setCommentairesCorrection(prev => ({
-                                                      ...prev,
-                                                      [question.id]: e.target.value
-                                                  }))}
-                                                  className="commentaire-input"
-                                                  placeholder="Ajouter un commentaire..."
-                                                  disabled={question.estCorrigee}
-                                              />
-                                          </div>
+                                          
                                       </div>
                                   </div>
                               </div>
@@ -1320,13 +1307,7 @@ const EnseignantDashboard = () => {
           <Icon type="plus" />
           <span>Créer un examen</span>
         </button>
-        <button 
-          className={activeTab === 'corriger' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('corriger')}
-        >
-          <Icon type="check" />
-          <span>À corriger</span>
-        </button>
+        
         <button 
           className={activeTab === 'resultats-correction' ? 'tab active' : 'tab'}
           onClick={() => setActiveTab('resultats-correction')}
@@ -1438,15 +1419,6 @@ const EnseignantDashboard = () => {
                     </div>
 
                     <div className="action-buttons-row">
-                      <button 
-                        className="btn-success"
-                        onClick={() => confirmerAction('corriger_auto', resultatsExamen.id)}
-                        disabled={correctionEnCours}
-                      >
-                        <Icon type="refresh" />
-                        {correctionEnCours ? 'Correction en cours...' : 'Correction automatique'}
-                      </button>
-                      
                       <button 
                         className="btn-primary"
                         onClick={() => confirmerAction('calculer_notes', resultatsExamen.id)}
@@ -1760,7 +1732,7 @@ const EnseignantDashboard = () => {
                           <div key={index} className="question-preview">
                             <span className="question-index">Question {index + 1}</span>
                             <span className="question-type">
-                              {question.type === 'QCM' || question.typeChoix === 'UNIQUE' ? 'Choix' : 'Développement'}
+                              {question.typeChoix === 'QCM' || question.typeChoix === 'UNIQUE' ? 'Choix' : 'Développement'}
                             </span>
                             <span className="question-points">{question.bareme} pts</span>
                           </div>
@@ -2340,155 +2312,14 @@ const EnseignantDashboard = () => {
                     }}
                     className="filtre-select"
                   >
-                    <option value="a-corriger">À corriger</option>
                     <option value="toutes">Toutes les tentatives</option>
                   </select>
                 </div>
               </div>
             </div>
             
-            {examenSelectionne ? (
-              filtreTentatives === 'a-corriger' ? (
-                tentativesACorriger.length === 0 ? (
-                  <div className="empty-state">
-                    <Icon type="check" className="empty-icon" />
-                    <p>Aucune tentative à corriger pour cet examen</p>
-                    <p className="subtext">
-                      Les tentatives avec des questions à développement non corrigées apparaîtront ici.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="tentatives-table">
-                    <div className="table-header">
-                      <h3>Tentatives à corriger ({tentativesACorriger.length})</h3>
-                      <div className="table-info">
-                        <span>
-                          <Icon type="alert" /> Questions à développement nécessitant une correction manuelle
-                        </span>
-                      </div>
-                    </div>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Étudiant</th>
-                          <th>Email</th>
-                          <th>Date de soumission</th>
-                          <th>Questions à corriger</th>
-                          <th>Note actuelle</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tentativesACorriger.map(tentative => (
-                          <tr key={tentative.id}>
-                            <td>{tentative.etudiantNom}</td>
-                            <td>{tentative.etudiantEmail}</td>
-                            <td>{formaterDate(tentative.dateSoumission)}</td>
-                            <td>
-                              <span className="badge-avertissement">
-                                {tentative.questionsDevNonCorrigees} question(s)
-                              </span>
-                            </td>
-                            <td>
-                              <span className={tentative.noteFinale > 0 ? 'score-positif' : 'score-zero'}>
-                                {tentative.noteFinale || 0}
-                              </span>
-                            </td>
-                            <td>
-                              <button 
-                                className="btn-primary btn-sm"
-                                onClick={() => corrigerTentative(tentative.id)}
-                              >
-                                <Icon type="edit" />
-                                Corriger
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )
-              ) : (
-                tentatives.length === 0 ? (
-                  <div className="empty-state">
-                    <Icon type="users" className="empty-icon" />
-                    <p>Aucune tentative soumise pour cet examen</p>
-                  </div>
-                ) : (
-                  <div className="tentatives-table">
-                    <div className="table-header">
-                      <h3>Toutes les tentatives ({tentatives.length})</h3>
-                      <div className="table-actions">
-                        <button 
-                          className="btn-secondary btn-sm"
-                          onClick={() => examenSelectionne && chargerToutesLesTentatives(examenSelectionne)}
-                        >
-                          <Icon type="refresh" />
-                          Rafraîchir
-                        </button>
-                      </div>
-                    </div>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Étudiant</th>
-                          <th>Email</th>
-                          <th>Date de soumission</th>
-                          <th>Statut</th>
-                          <th>Note</th>
-                          <th>Correction</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tentatives.map(tentative => (
-                          <tr key={tentative.id}>
-                            <td>{tentative.etudiant}</td>
-                            <td>{tentative.email}</td>
-                            <td>{formaterDate(tentative.dateSoumission)}</td>
-                            <td>
-                              <span className={`statut-badge statut-${tentative.statut?.toLowerCase()}`}>
-                                {tentative.statut}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`score-display ${tentative.noteFinale > 0 ? 'score-positif' : 'score-zero'}`}>
-                                {tentative.estNoteFinaleCalculee ? tentative.noteFinale.toFixed(1) : 'N/A'}
-                                {tentative.estNoteFinaleCalculee && <Icon type="check" className="score-icon" />}
-                              </span>
-                            </td>
-                            <td>
-                              {tentative.estNoteFinaleCalculee ? (
-                                <span className="badge-success">
-                                  <Icon type="check" />
-                                  Corrigée
-                                </span>
-                              ) : (
-                                <span className="badge-warning">
-                                  <Icon type="alert" />
-                                  À corriger
-                                </span>
-                              )}
-                            </td>
-                            <td>
-                              <div className="action-buttons">
-                                <button 
-                                  className="btn-primary btn-sm"
-                                  onClick={() => corrigerTentative(tentative.id)}
-                                >
-                                  <Icon type="edit" />
-                                  {tentative.estNoteFinaleCalculee ? 'Voir' : 'Corriger'}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )
-              )
+            {!examenSelectionne ? (
+              ""
             ) : (
               <div className="empty-state">
                 <Icon type="users" className="empty-icon" />

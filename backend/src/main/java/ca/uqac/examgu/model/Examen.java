@@ -47,9 +47,6 @@ public class Examen {
     @JsonIgnore
     private final List<Inscription> inscriptions = new ArrayList<>();
 
-    @OneToOne(mappedBy = "examen", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private NotePublication publication;
-
     @Column(name = "est_corrige")
     private boolean estCorrige = false;
 
@@ -103,23 +100,23 @@ public class Examen {
     }
 
     public boolean estDisponible() {
-        // Un examen est disponible si:
-        // 1. Il est dans l'état OUVERT
-        // 2. La date actuelle est entre dateDebut et dateFin
+        System.out.println(1);
         LocalDateTime now = LocalDateTime.now();
         if (etat != EtatExamen.OUVERT) {
+            System.out.println(2);
             return false;
         }
 
-        if (now == null || dateDebut == null || dateFin == null) {
+        if (dateDebut == null || dateFin == null) {
+            System.out.println(3);
             return false;
         }
 
+        System.out.println(4);
+        System.out.println(dateDebut);
+        System.out.println(dateFin);
+        System.out.println(now);
         return !now.isBefore(dateDebut) && !now.isAfter(dateFin);
-    }
-
-    public boolean estOuvert() {
-        return etat == EtatExamen.OUVERT && estDisponible();
     }
 
     public List<String> getValidationsPourEtatPret(){
@@ -343,20 +340,6 @@ public class Examen {
                 .sum();
     }
 
-    public boolean peutDemarrerTentative(Etudiant etudiant) {
-        // Un étudiant peut démarrer une tentative si:
-        // 1. L'examen est disponible
-        // 2. L'étudiant est inscrit
-        return estDisponible() && estInscrit(etudiant);
-    }
-
-    public long getTempsRestant(LocalDateTime maintenant) {
-        if (dateFin == null || maintenant.isAfter(dateFin)) {
-            return 0;
-        }
-        return Duration.between(maintenant, dateFin).toMinutes();
-    }
-
     public boolean isEstCorrige() {
         return estCorrige;
     }
@@ -375,11 +358,6 @@ public class Examen {
         this.datePublicationNotes = null;
     }
 
-    public boolean sontNotesVisibles() {
-        return notesVisibles;
-    }
-
-    // Getters et Setters
     public boolean isNotesVisibles() {
         return notesVisibles;
     }
@@ -478,17 +456,6 @@ public class Examen {
         this.inscriptions.clear();
         if (inscriptions != null) {
             this.inscriptions.addAll(inscriptions);
-        }
-    }
-
-    public NotePublication getPublication() {
-        return publication;
-    }
-
-    public void setPublication(NotePublication publication) {
-        this.publication = publication;
-        if (publication != null) {
-            publication.setExamen(this);
         }
     }
 

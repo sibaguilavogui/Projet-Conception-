@@ -2,9 +2,6 @@ package ca.uqac.examgu.controller;
 
 import ca.uqac.examgu.model.*;
 import ca.uqac.examgu.model.Enumerations.StatutTentative;
-import ca.uqac.examgu.repository.EnseignantRepository;
-import ca.uqac.examgu.repository.EtudiantRepository;
-import ca.uqac.examgu.repository.UtilisateurRepository;
 import ca.uqac.examgu.service.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,13 +20,11 @@ public class TentativeController {
     private final TentativeService tentativeService;
     private final EtudiantService etudiantService;
     private final EnseignantService enseignantService;
-    private final ExamenService examenService;
 
-    public TentativeController(TentativeService tentativeService, EtudiantService etudiantService, EnseignantService enseignantService, ExamenService examenService) {
+    public TentativeController(TentativeService tentativeService, EtudiantService etudiantService, EnseignantService enseignantService) {
         this.tentativeService = tentativeService;
         this.etudiantService = etudiantService;
         this.enseignantService = enseignantService;
-        this.examenService = examenService;
     }
 
 
@@ -301,7 +296,7 @@ public class TentativeController {
         }
     }
 
-    // Ajoutez cette méthode pour un endpoint de vérification rapide
+
     @GetMapping("/{tentativeId}/verification-rapide")
     @PreAuthorize("hasRole('ETUDIANT')")
     public ResponseEntity<?> getVerificationRapide(
@@ -330,7 +325,6 @@ public class TentativeController {
         }
     }
 
-    // Méthode utilitaire pour mapper les infos de la tentative
     private Map<String, Object> mapTentativeInfo(Tentative tentative) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", tentative.getId());
@@ -344,7 +338,6 @@ public class TentativeController {
         return map;
     }
 
-    // Méthode utilitaire pour mapper les infos de l'examen
     private Map<String, Object> mapExamenInfo(Examen examen) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", examen.getId());
@@ -471,8 +464,7 @@ public class TentativeController {
 
     @GetMapping("/{tentativeId}/reponses-developpement")
     @PreAuthorize("hasRole('ENSEIGNANT')")
-    public ResponseEntity<?> getReponsesDeveloppementTentative(
-            @PathVariable UUID tentativeId,
+    public ResponseEntity<?> getReponsesDeveloppementTentative(@PathVariable UUID tentativeId,
             Authentication auth) {
 
         try {
@@ -504,9 +496,8 @@ public class TentativeController {
 
     @PostMapping("/{tentativeId}/reponses/{reponseId}/corriger-developpement")
     @PreAuthorize("hasRole('ENSEIGNANT')")
-    public ResponseEntity<?> corrigerQuestionDeveloppement(@PathVariable UUID tentativeId,
-            @PathVariable UUID reponseId, @RequestBody Map<String, Object> request,
-            Authentication auth) {
+    public ResponseEntity<?> corrigerQuestionDeveloppement(@PathVariable UUID tentativeId, @PathVariable UUID reponseId,
+                                                           @RequestBody Map<String, Object> request, Authentication auth) {
 
         try {
             UUID enseignantId = getEnseignantCourantId(auth);
@@ -592,10 +583,8 @@ public class TentativeController {
 
     @PostMapping("/{tentativeId}/corriger-developpement")
     @PreAuthorize("hasRole('ENSEIGNANT')")
-    public ResponseEntity<?> corrigerQuestionsDeveloppement(
-            @PathVariable UUID tentativeId,
-            @RequestBody Map<String, Object> corrections,
-            Authentication auth) {
+    public ResponseEntity<?> corrigerQuestionsDeveloppement(@PathVariable UUID tentativeId,
+            @RequestBody Map<String, Object> corrections, Authentication auth) {
 
         try {
             UUID enseignantId = getEnseignantCourantId(auth);
@@ -711,8 +700,4 @@ public class TentativeController {
         return etudiant.getId();
     }
 
-    @GetMapping
-    public List<Tentative> getTents(){
-        return tentativeService.getTents();
-    }
 }

@@ -1,9 +1,7 @@
 package ca.uqac.examgu.service;
 
 import ca.uqac.examgu.model.*;
-import ca.uqac.examgu.model.Enumerations.TypeEvenement;
 import ca.uqac.examgu.repository.*;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

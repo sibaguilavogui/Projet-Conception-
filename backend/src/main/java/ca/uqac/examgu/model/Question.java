@@ -49,19 +49,6 @@ public abstract class Question {
         return "INCONNU";
     }
 
-    protected boolean validationDeBase() {
-        if (enonce == null || enonce.trim().isEmpty()) {
-            return false;
-        }
-        if (bareme <= 0) {
-            return false;
-        }
-        if (examen == null) {
-            return false;
-        }
-        return true;
-    }
-
     public abstract String getType();
 
     public UUID getId() {
