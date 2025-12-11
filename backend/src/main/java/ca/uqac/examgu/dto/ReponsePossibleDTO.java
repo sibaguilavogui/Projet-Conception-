@@ -13,7 +13,6 @@ public class ReponsePossibleDTO {
     @JsonProperty("estCorrecte")
     private boolean correcte;
 
-    // Constructeurs
     public ReponsePossibleDTO() {}
 
     public ReponsePossibleDTO(UUID id, String libelle, boolean correcte) {
@@ -22,7 +21,6 @@ public class ReponsePossibleDTO {
         this.correcte = correcte;
     }
 
-    // Méthode de conversion depuis l'entité
     public static ReponsePossibleDTO fromEntity(ReponsePossible reponse) {
         return new ReponsePossibleDTO(
                 reponse.getId(),
@@ -31,7 +29,6 @@ public class ReponsePossibleDTO {
         );
     }
 
-    // Getters et Setters
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 

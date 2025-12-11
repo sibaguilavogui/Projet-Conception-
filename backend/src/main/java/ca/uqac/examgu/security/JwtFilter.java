@@ -33,7 +33,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        if (path.startsWith("/auth/")) {
+        if (path.startsWith("/api/auth/") || path.equals("/health") || path.equals("/docs")) {
             System.out.println("JwtFilter: Skipping authentication for " + path);
             filterChain.doFilter(request, response);
             return;

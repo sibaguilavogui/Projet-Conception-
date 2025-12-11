@@ -14,7 +14,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/tentatives")
+@RequestMapping("/api/tentatives")
 public class TentativeController {
 
     private final TentativeService tentativeService;
@@ -30,9 +30,7 @@ public class TentativeController {
 
     @PostMapping("/{tentativeId}/save-reponse")
     @PreAuthorize("hasRole('ETUDIANT')")
-    public ResponseEntity<?> sauvegarderReponse(
-            @PathVariable UUID tentativeId,
-            @RequestBody Map<String, Object> request,
+    public ResponseEntity<?> sauvegarderReponse(@PathVariable UUID tentativeId, @RequestBody Map<String, Object> request,
             Authentication authentication) {
 
         try {
@@ -61,17 +59,13 @@ public class TentativeController {
 
     @GetMapping("/{tentativeId}/questions")
     @PreAuthorize("hasRole('ETUDIANT')")
-    public ResponseEntity<?> getQuestionsPourTentative(
-            @PathVariable UUID tentativeId,
-            Authentication authentication) {
+    public ResponseEntity<?> getQuestionsPourTentative(@PathVariable UUID tentativeId, Authentication authentication) {
 
         try {
             UUID etudiantId = getEtudiantCourantId(authentication);
 
-            // Récupérer la tentative pour vérifier les droits
             Tentative tentative = tentativeService.getTentative(tentativeId, etudiantId);
 
-            // Vérifier que la tentative est en cours
             if (!tentative.getStatut().equals(StatutTentative.EN_COURS)) {
                 return ResponseEntity.badRequest()
                         .body("La tentative n'est pas en cours. Statut: " + tentative.getStatut());
@@ -80,19 +74,16 @@ public class TentativeController {
             Examen examen = tentative.getExamen();
             List<Map<String, Object>> questionsDTO = new ArrayList<>();
 
-            // Pour chaque question de l'examen
             for (int i = 0; i < examen.getQuestions().size(); i++) {
                 Question question = examen.getQuestions().get(i);
                 Map<String, Object> questionDTO = new HashMap<>();
 
-                // Informations de base
                 questionDTO.put("id", question.getId());
                 questionDTO.put("numero", i + 1);
                 questionDTO.put("enonce", question.getEnonce());
                 questionDTO.put("bareme", question.getBareme());
                 questionDTO.put("type", question.getClass().getSimpleName());
 
-                // Récupérer la réponse déjà donnée (si elle existe)
                 ReponseDonnee reponseExistante = tentative.trouverReponse(question.getId());
                 if (reponseExistante != null) {
                     questionDTO.put("reponseExistante", reponseExistante.getContenu());
@@ -101,25 +92,20 @@ public class TentativeController {
                     questionDTO.put("reponseExistante", null);
                 }
 
-                // Traitement spécifique selon le type de question
                 if (question instanceof QuestionAChoix) {
                     QuestionAChoix questionChoix = (QuestionAChoix) question;
                     questionDTO.put("typeQuestion", "CHOIX");
                     questionDTO.put("typeChoix", questionChoix.getTypeChoix());
 
-                    // Pour les questions à choix multiples (QCM)
                     if (questionChoix.getTypeChoix() == QuestionAChoix.TypeChoix.QCM) {
                         questionDTO.put("politiqueCorrection", questionChoix.getPolitiqueCorrectionQCM());
                     }
 
-                    // Liste des choix possibles (sans indiquer les bonnes réponses)
                     List<Map<String, Object>> choixDTO = new ArrayList<>();
                     for (ReponsePossible choix : questionChoix.getReponsesPossibles()) {
                         Map<String, Object> choixMap = new HashMap<>();
                         choixMap.put("id", choix.getId());
                         choixMap.put("texte", choix.getLibelle());
-                        //choixMap.put("ordre", choix.getOrdre());
-                        // NOTE: On ne met PAS "correcte" pour ne pas donner la réponse
                         choixDTO.add(choixMap);
                     }
                     questionDTO.put("choix", choixDTO);
@@ -132,7 +118,6 @@ public class TentativeController {
                 questionsDTO.add(questionDTO);
             }
 
-            // Retourner également les informations de la tentative
             Map<String, Object> response = new HashMap<>();
             response.put("tentative", mapTentativeInfo(tentative));
             response.put("questions", questionsDTO);
@@ -150,48 +135,38 @@ public class TentativeController {
 
     @GetMapping("/{tentativeId}/statut-temps-reel")
     @PreAuthorize("hasRole('ETUDIANT')")
-    public ResponseEntity<?> getStatutTempsReel(
-            @PathVariable UUID tentativeId,
-            Authentication authentication) {
+    public ResponseEntity<?> getStatutTempsReel(@PathVariable UUID tentativeId, Authentication authentication) {
 
         try {
             UUID etudiantId = getEtudiantCourantId(authentication);
 
-            // Récupérer la tentative
             Tentative tentative = tentativeService.getTentative(tentativeId, etudiantId);
 
-            // Calculer les statistiques
             Map<String, Object> statut = new HashMap<>();
 
-            // 1. Informations temporelles
             statut.put("tempsRestantSecondes", tentative.tempsRestant());
             statut.put("tempsRestantMinutes", tentative.tempsRestant() / 60);
             statut.put("debut", tentative.getDebut());
             statut.put("finPrevue", tentative.getFin());
             statut.put("dateSoumission", tentative.getDateSoumission());
 
-            // 2. État de la tentative
             statut.put("statut", tentative.getStatut());
             statut.put("estExpiree", tentative.estExpiree());
             statut.put("estEnCours", tentative.getStatut() == StatutTentative.EN_COURS);
             statut.put("estSoumise", tentative.getStatut() == StatutTentative.SOUMISE);
 
-            // 3. Progression
             statut.put("nombreQuestionsRepondues", tentative.getNombreQuestionsRepondues());
             statut.put("nombreQuestionsTotal", tentative.getExamen().getQuestions().size());
             statut.put("pourcentageCompletion", tentative.getPourcentageCompletion());
 
-            // 5. Dernière activité
             statut.put("dateDerniereModification", tentative.getDateModification());
 
-            // 6. Calculer le temps écoulé
             LocalDateTime maintenant = LocalDateTime.now();
             if (tentative.getDebut() != null) {
                 long secondesEcoulees = Duration.between(tentative.getDebut(), maintenant).getSeconds();
                 statut.put("tempsEcouleSecondes", secondesEcoulees);
                 statut.put("tempsEcouleMinutes", secondesEcoulees / 60);
 
-                // Pourcentage du temps écoulé
                 if (tentative.getExamen().getDureeMinutes() > 0) {
                     double pourcentageTempsEcoule = (double) secondesEcoulees /
                             (tentative.getExamen().getDureeMinutes() * 60) * 100;
@@ -199,7 +174,6 @@ public class TentativeController {
                 }
             }
 
-            // 7. Alertes et avertissements
             List<String> alertes = new ArrayList<>();
 
             if (tentative.estExpiree()) {
@@ -217,7 +191,6 @@ public class TentativeController {
 
             statut.put("alertes", alertes);
 
-            // 8. Recommandations
             List<String> recommandations = new ArrayList<>();
 
             long tempsRestant = tentative.tempsRestant();
@@ -236,7 +209,6 @@ public class TentativeController {
 
             statut.put("recommandations", recommandations);
 
-            // 9. Métriques de performance
             if (tentative.getDebut() != null) {
                 long dureeTotale = Duration.between(tentative.getDebut(), maintenant).getSeconds();
                 if (dureeTotale > 0) {
@@ -246,7 +218,6 @@ public class TentativeController {
                 }
             }
 
-            // 10. Résumé par type de question (si les réponses existent)
             if (!tentative.getReponses().isEmpty()) {
                 Map<String, Object> statsQuestions = new HashMap<>();
 
@@ -263,7 +234,6 @@ public class TentativeController {
                 statsQuestions.put("qcmRepondues", qcmRepondues);
                 statsQuestions.put("devRepondues", devRepondues);
 
-                // Compter le total par type dans l'examen
                 long totalQCM = tentative.getExamen().getQuestions().stream()
                         .filter(q -> q instanceof QuestionAChoix)
                         .count();
@@ -299,9 +269,7 @@ public class TentativeController {
 
     @GetMapping("/{tentativeId}/verification-rapide")
     @PreAuthorize("hasRole('ETUDIANT')")
-    public ResponseEntity<?> getVerificationRapide(
-            @PathVariable UUID tentativeId,
-            Authentication authentication) {
+    public ResponseEntity<?> getVerificationRapide(@PathVariable UUID tentativeId, Authentication authentication) {
 
         try {
             UUID etudiantId = getEtudiantCourantId(authentication);
@@ -309,7 +277,6 @@ public class TentativeController {
 
             Map<String, Object> verification = new HashMap<>();
 
-            // Informations essentielles seulement
             verification.put("statut", tentative.getStatut().toString());
             verification.put("tempsRestant", tentative.tempsRestant());
             verification.put("estExpiree", tentative.estExpiree());
@@ -426,7 +393,6 @@ public class TentativeController {
 
                 Tentative tentative = tentativeService.getTentativePourCorrection(tentativeId, enseignantId);
 
-                // Formater la réponse
                 return ResponseEntity.ok(formaterTentativePourCorrection(tentative));
             }
 
@@ -470,10 +436,8 @@ public class TentativeController {
         try {
             UUID enseignantId = getEnseignantCourantId(auth);
 
-            // Récupérer les réponses de développement
             List<ReponseDonnee> reponsesDev = tentativeService.getReponsesDevTentative(tentativeId, enseignantId);
 
-            // Transformer en DTO simplifié (questionId et contenu uniquement)
             List<Map<String, Object>> reponsesADeveloppement = reponsesDev.stream()
                     .map(reponse -> {
                         Map<String, Object> dto = new HashMap<>();
@@ -502,7 +466,6 @@ public class TentativeController {
         try {
             UUID enseignantId = getEnseignantCourantId(auth);
 
-            // Vérifier les permissions
             Tentative tentative = tentativeService.getTentativePourCorrection(tentativeId, enseignantId);
 
             double note = ((Number) request.get("note")).doubleValue();
@@ -521,24 +484,19 @@ public class TentativeController {
 
     @GetMapping("/{tentativeId}/questions-developpement")
     @PreAuthorize("hasRole('ENSEIGNANT')")
-    public ResponseEntity<?> getQuestionsDeveloppementPourCorrection(
-            @PathVariable UUID tentativeId,
-            Authentication auth) {
+    public ResponseEntity<?> getQuestionsDeveloppementPourCorrection(@PathVariable UUID tentativeId, Authentication auth) {
 
         try {
             UUID enseignantId = getEnseignantCourantId(auth);
 
-            // Récupérer la tentative
             Tentative tentative = tentativeService.getTentativePourCorrection(tentativeId, enseignantId);
 
-            // Vérifier que l'examen est terminé
             Examen examen = tentative.getExamen();
             if (examen.getDateFin() != null && examen.getDateFin().isAfter(LocalDateTime.now())) {
                 return ResponseEntity.badRequest()
                         .body("La correction n'est disponible qu'après la date de fin de l'examen");
             }
 
-            // Filtrer pour ne garder que les questions à développement
             List<Map<String, Object>> questionsDev = new ArrayList<>();
             for (Question question : examen.getQuestions()) {
                 if (question instanceof QuestionADeveloppement) {
@@ -561,7 +519,6 @@ public class TentativeController {
                 }
             }
 
-            // Préparer la réponse
             Map<String, Object> response = new HashMap<>();
             response.put("tentativeId", tentative.getId());
             response.put("etudiant", mapEtudiant(tentative.getEtudiant()));
@@ -589,17 +546,14 @@ public class TentativeController {
         try {
             UUID enseignantId = getEnseignantCourantId(auth);
 
-            // Récupérer la tentative
             Tentative tentative = tentativeService.getTentativePourCorrection(tentativeId, enseignantId);
 
-            // Vérifier que l'examen est terminé
             Examen examen = tentative.getExamen();
             if (examen.getDateFin() != null && examen.getDateFin().isAfter(LocalDateTime.now())) {
                 return ResponseEntity.badRequest()
                         .body("La correction n'est disponible qu'après la date de fin de l'examen");
             }
 
-            // Extraire les corrections
             List<Map<String, Object>> correctionsList = (List<Map<String, Object>>) corrections.get("corrections");
             Map<UUID, Double> notes = new HashMap<>();
             Map<UUID, String> commentaires = new HashMap<>();
@@ -613,7 +567,6 @@ public class TentativeController {
                 commentaires.put(reponseId, commentaire);
             }
 
-            // Appliquer les corrections
             Tentative tentativeCorrigee = tentativeService.corrigerTentativeComplete(
                     tentativeId, notes, commentaires, enseignantId);
 
@@ -637,7 +590,6 @@ public class TentativeController {
         result.put("estNoteFinaleCalculee", tentative.isEstNoteFinaleCalculee());
         result.put("dateCalculNote", tentative.getDateCalculNote());
 
-        // Questions avec réponses
         List<Map<String, Object>> questions = new ArrayList<>();
 
         for (Question question : tentative.getExamen().getQuestions()) {
@@ -647,7 +599,6 @@ public class TentativeController {
             qMap.put("bareme", question.getBareme());
             qMap.put("type", question.getClass().getSimpleName());
 
-            // Récupérer la réponse de l'étudiant
             ReponseDonnee reponse = tentative.trouverReponse(question.getId());
             if (reponse != null) {
                 Map<String, Object> rMap = new HashMap<>();

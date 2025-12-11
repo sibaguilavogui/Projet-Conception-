@@ -62,7 +62,6 @@ public class Tentative {
     @Column(name = "date_modification")
     private LocalDateTime dateModification;
 
-    // Constructeurs
     public Tentative() {
         this.dateCreation = LocalDateTime.now();
         this.statut = StatutTentative.EN_COURS;
@@ -87,7 +86,6 @@ public class Tentative {
     public void sauvegarderReponse(UUID questionId, String contenu) {
         LocalDateTime now = LocalDateTime.now();
 
-        // Vérifier si la tentative peut encore être modifiée
         if (!peutModifier()) {
             throw new IllegalStateException("La tentative ne peut plus être modifiée (soumise ou deadline atteinte)");
         }
@@ -139,9 +137,7 @@ public class Tentative {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime deadline = calculerDeadline();
 
-        // Vérifier si la deadline est dépassée
         if (deadline != null && now.isAfter(deadline)) {
-            // Si la tentative est encore en cours, elle doit être soumise automatiquement
             if (statut == StatutTentative.EN_COURS) {
                 return true;
             }
@@ -198,7 +194,6 @@ public class Tentative {
             return null;
         }
 
-        // La deadline est soit la date de fin de l'examen, soit le début + durée de l'examen
         LocalDateTime deadlineParDuree = debut.plusMinutes(Math.max(0, examen.getDureeMinutes()));
         LocalDateTime finExamen = examen.getDateFin();
 
@@ -206,12 +201,10 @@ public class Tentative {
             return deadlineParDuree;
         }
 
-        // Retourner la plus proche des deux dates
         return deadlineParDuree.isBefore(finExamen) ? deadlineParDuree : finExamen;
     }
 
     private boolean peutModifier() {
-        // Une tentative ne peut être modifiée que si elle est en cours ET non expirée
         return statut == StatutTentative.EN_COURS && !estExpiree();
     }
 

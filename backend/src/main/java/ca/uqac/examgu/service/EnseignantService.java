@@ -84,15 +84,12 @@ public class EnseignantService {
         List<Examen> examensCrees = examenRepository.findByCreateur(enseignant);
 
         if (!examensCrees.isEmpty()) {
-            // Supprimer d'abord toutes les inscriptions liées à ces examens
             for (Examen examen : examensCrees) {
                 inscriptionRepository.deleteByExamen(examen);
-                // Supprimer aussi les questions, tentatives, etc.
                 questionRepository.deleteByExamen(examen);
                 tentativeRepository.deleteByExamen(examen);
             }
 
-            // Ensuite supprimer les examens
             examenRepository.deleteAll(examensCrees);
         }
         enseignantRepository.delete(enseignant);

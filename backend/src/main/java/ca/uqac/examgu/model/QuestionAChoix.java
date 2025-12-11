@@ -99,7 +99,7 @@ public class QuestionAChoix extends Question {
 
     private double calculerNoteChoixUnique(ReponseDonnee reponseDonnee) {
         try {
-            UUID reponseId = UUID.fromString(reponseDonnee.getContenu());
+            UUID reponseId = UUID.fromString(reponseDonnee.getContenu().trim());
             ReponsePossible reponseChoisie = reponsesPossibles.stream()
                     .filter(r -> r.getId().equals(reponseId))
                     .findFirst()
@@ -117,8 +117,19 @@ public class QuestionAChoix extends Question {
 
     private double calculerNoteQCM(ReponseDonnee reponseDonnee) throws Exception {
         try {
-            String[] idsSelectionnes = reponseDonnee.getContenu().split(",");
+            String contenuBrut = reponseDonnee.getContenu();
+            if (contenuBrut == null || contenuBrut.isBlank()) return 0.0;
+
+            contenuBrut = contenuBrut
+                    .replace("[", "")
+                    .replace("]", "")
+                    .replace("\"", "")
+                    .trim();
+
+            String[] idsSelectionnes = contenuBrut.split(",");
             Set<UUID> reponsesSelectionnees = Arrays.stream(idsSelectionnes)
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
                     .map(UUID::fromString)
                     .collect(Collectors.toSet());
 

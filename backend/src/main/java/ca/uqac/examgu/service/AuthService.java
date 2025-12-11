@@ -87,7 +87,6 @@ public class AuthService {
                 return ResponseEntity.badRequest().body("Le mot de passe est obligatoire");
             }
 
-            // Vérifier si l'utilisateur existe
             Optional<Utilisateur> utilisateurOpt = utilisateurRepository.findByEmail(email);
             if (utilisateurOpt.isEmpty()) {
                 journalisationService.log(
@@ -99,16 +98,13 @@ public class AuthService {
                         .body("Identifiants invalides");
             }
 
-            // Authentifier avec Spring Security
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, motDePasse)
             );
             System.out.println(authentication.getName());
 
-            // Mettre à jour le contexte de sécurité
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            // Récupérer l'utilisateur authentifié
             Utilisateur utilisateur = utilisateurOpt.get();
 
             journalisationService.log(
@@ -117,7 +113,6 @@ public class AuthService {
                     "Connexion réussie - Rôle: " + utilisateur.getRole()
             );
 
-            // Préparer la réponse
             LoginResponse response = new LoginResponse(
                     "Connexion réussie",
                     utilisateur.getId(),

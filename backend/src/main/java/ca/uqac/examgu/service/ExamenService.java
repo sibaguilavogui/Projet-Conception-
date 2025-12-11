@@ -91,17 +91,14 @@ public class ExamenService {
         Examen examen = examenRepository.findById(examenId)
                 .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
 
-        // Vérifier que l'enseignant est le créateur
         if (!examen.getCreateur().equals(enseignant)) {
             throw new SecurityException("Vous n'êtes pas le créateur de cet examen");
         }
 
-        // Vérifier que l'examen est en brouillon
         if (examen.getEtat() != EtatExamen.BROUILLON && examen.getEtat() != EtatExamen.PRET) {
             throw new IllegalStateException("Seuls les examens en brouillon peuvent être supprimés");
         }
 
-        // Supprimer l'examen
         examenRepository.delete(examen);
     }
 
@@ -120,7 +117,6 @@ public class ExamenService {
                     .body("Seul le créateur de l'examen peut le marquer comme prêt");
         }
 
-        // Valider que l'examen peut être marqué comme PRÊT
         List<String> validations = examen.getValidationsPourEtatPret();
         if (!validations.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -128,7 +124,6 @@ public class ExamenService {
                             String.join("\n", validations));
         }
 
-        // Marquer comme PRÊT
         examen.mettreEnEtatPret();
         examenRepository.save(examen);
         Map<String, Object> response = new HashMap<>();
@@ -141,7 +136,7 @@ public class ExamenService {
         return examenRepository.findAll();
     }
     public List<Examen> listerExamenEnseignant(Enseignant enseignant){return examenRepository.findAll()
-            .stream().filter(examen -> examen.getCreateur().equals(enseignant)).toList();}
+            .stream().filter(examen -> examen.getCreateur().getId().equals(enseignant.getId())).toList();}
 
     public List<Examen> listerExamenEtudiant(Etudiant etudiant){return examenRepository.findAll()
             .stream().filter(examen -> examen.estInscrit(etudiant)).toList();}
@@ -186,8 +181,7 @@ public class ExamenService {
                     try {
                         reponse.corrigerAutomatiquement();
                         qcmCorriges++;
-                    } catch (Exception e) {
-                        // Ignorer les erreurs
+                    } catch (Exception ignored) {
                     }
                 }
             }
@@ -241,7 +235,7 @@ public class ExamenService {
         List<Tentative> tentatives = tentativeRepository.findByExamenId(examenId);
 
         if (tentatives.isEmpty()) {
-            return true; // Aucune tentative, donc rien à corriger
+            return true;
         }
 
         return tentatives.stream().allMatch(Tentative::isEstCorrigee);
@@ -266,7 +260,6 @@ public class ExamenService {
             infoTentative.put("tentativeId", tentative.getId());
             infoTentative.put("etudiant", tentative.getEtudiant().getNom() + " " + tentative.getEtudiant().getPrenom());
 
-            // Vérifier les questions à développement non corrigées
             List<Question> questionsDevNonCorrigees = tentative.getReponses().stream()
                     .filter(r -> r.getQuestion().getType().equals("DEVELOPPEMENT") && !r.isEstCorrigee())
                     .map(ReponseDonnee::getQuestion)
@@ -286,20 +279,17 @@ public class ExamenService {
                 continue;
             }
 
-            // Corriger automatiquement les QCM
             int qcmCorriges = 0;
             for (ReponseDonnee reponse : tentative.getReponses()) {
                 if (reponse.getQuestion().getType().equals("CHOIX") && !reponse.isEstCorrigee()) {
                     try {
                         reponse.corrigerAutomatiquement();
                         qcmCorriges++;
-                    } catch (Exception e) {
-                        // Ignorer les erreurs pour cette correction
+                    } catch (Exception ignored) {
                     }
                 }
             }
 
-            // Calculer la note finale
             tentative.calculerNoteFinale();
             tentativeRepository.save(tentative);
 
@@ -317,9 +307,6 @@ public class ExamenService {
 
         if (toutesCorrigees) {
             resultat.put("message", "Toutes les notes ont été calculées avec succès");
-            // Marquer l'examen comme corrigé si vous avez cet attribut
-            // examen.setCorrige(true);
-            // examenRepository.save(examen);
         } else {
             resultat.put("message", "Certaines tentatives n'ont pas pu être entièrement corrigées");
         }
@@ -327,7 +314,7 @@ public class ExamenService {
         return resultat;
     }
 
-    @Scheduled(fixedRate = 60000) // Vérifie toutes les minutes
+    @Scheduled(fixedRate = 30000)
     public void ouvrirExamensAutomatiquement() {
         LocalDateTime maintenant = LocalDateTime.now();
 
@@ -348,7 +335,6 @@ public class ExamenService {
                 }
             }
 
-            // Fermer les examens dont la date de fin est passée
             if (examen.getEtat() == EtatExamen.OUVERT
                     && examen.getDateFin() != null
                     && maintenant.isAfter(examen.getDateFin())) {

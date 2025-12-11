@@ -25,7 +25,7 @@ const EtudiantDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:8080/examens/${examen.id}/verifier-tentative`,
+        `/api/examens/${examen.id}/verifier-tentative`,
         {
           method: 'GET',
           headers: {
@@ -52,7 +52,7 @@ const EtudiantDashboard = () => {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/examens', {
+      const response = await fetch('/api/examens', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -139,7 +139,7 @@ const EtudiantDashboard = () => {
       
       // Option 1: Récupérer toutes les tentatives de l'étudiant
       // Note: Cet endpoint retourne toutes les tentatives
-      const response = await fetch('http://localhost:8080/tentatives', {
+      const response = await fetch('/api/tentatives', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -160,7 +160,7 @@ const EtudiantDashboard = () => {
           tentativesFiltrees.map(async (tentative) => {
             // Pour chaque tentative, récupérer l'examen associé
             const examenResponse = await fetch(
-              `http://localhost:8080/examens/${tentative.examen?.id}`,
+              `/api/examens/${tentative.examen?.id}`,
               {
                 method: 'GET',
                 headers: {
@@ -199,7 +199,7 @@ const EtudiantDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:8080/examens/${examenId}`,
+        `/api/examens/${examenId}`,
         {
           method: 'GET',
           headers: {
@@ -231,7 +231,7 @@ const EtudiantDashboard = () => {
       const token = localStorage.getItem('token');
       
       const verificationResponse = await fetch(
-        `http://localhost:8080/examens/${examen.id}/verifier-tentative`,
+        `/api/examens/${examen.id}/verifier-tentative`,
         {
           method: 'GET',
           headers: {
@@ -251,7 +251,7 @@ const EtudiantDashboard = () => {
           if (tentativeStatut === 'EN_COURS' && !verificationData.estExpiree) {
             // Tentative en cours non expirée : récupérer la tentative
             const reprendreResponse = await fetch(
-              `http://localhost:8080/tentatives/${verificationData.tentativeId}/reprendre`,
+              `/api/tentatives/${verificationData.tentativeId}/reprendre`,
               {
                 method: 'GET',
                 headers: {
@@ -269,7 +269,7 @@ const EtudiantDashboard = () => {
             }
           } else if (tentativeStatut === 'SOUMISE') {
             const tentativeResponse = await fetch(
-              `http://localhost:8080/tentatives/${verificationData.tentativeId}`,
+              `/api/tentatives/${verificationData.tentativeId}`,
               {
                 method: 'GET',
                 headers: {
@@ -288,7 +288,7 @@ const EtudiantDashboard = () => {
           } else if (tentativeStatut === 'EN_COURS' && verificationData.estExpiree) {
             // Tentative expirée : soumettre automatiquement
             const soumissionResponse = await fetch(
-              `http://localhost:8080/tentatives/${verificationData.tentativeId}/soumettre`,
+              `/api/tentatives/${verificationData.tentativeId}/soumettre`,
               {
                 method: 'POST',
                 headers: {
@@ -309,7 +309,7 @@ const EtudiantDashboard = () => {
         } else {
           // Pas de tentative existante, en démarrer une nouvelle
           const demarrerResponse = await fetch(
-            `http://localhost:8080/examens/${examen.id}/demarrer-tentative`,
+            `/api/examens/${examen.id}/demarrer-tentative`,
             {
               method: 'POST',
               headers: {
@@ -339,7 +339,7 @@ const EtudiantDashboard = () => {
   const soumettreExamen = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/tentatives/${tentativeEnCours.id}/soumettre`, {
+      const response = await fetch(`/api/tentatives/${tentativeEnCours.id}/soumettre`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -396,7 +396,7 @@ const EtudiantDashboard = () => {
       
       // Étape 1: Vérifier l'existence d'une tentative
       const verificationResponse = await fetch(
-        `http://localhost:8080/examens/${examen.id}/verifier-tentative`,
+        `/api/examens/${examen.id}/verifier-tentative`,
         {
           method: 'GET',
           headers: {
@@ -412,7 +412,7 @@ const EtudiantDashboard = () => {
         if (verificationData.tentativeExistante && verificationData.tentativeId) {
           // Étape 2: Récupérer la tentative complète
           const tentativeResponse = await fetch(
-            `http://localhost:8080/tentatives/${verificationData.tentativeId}`,
+            `/api/tentatives/${verificationData.tentativeId}`,
             {
               method: 'GET',
               headers: {
@@ -427,7 +427,7 @@ const EtudiantDashboard = () => {
             
             // Étape 3: Récupérer la note de l'examen (si disponible)
             const noteResponse = await fetch(
-              `http://localhost:8080/examens/${examen.id}/ma-note`,
+              `/api/examens/${examen.id}/ma-note`,
               {
                 method: 'GET',
                 headers: {
@@ -603,16 +603,7 @@ const EtudiantDashboard = () => {
             <span>Examens disponibles</span>
           </button>
           
-          <button 
-            className={activeTab === 'resultats' ? 'tab active' : 'tab'}
-            onClick={() => {
-              setActiveTab('resultats');
-              chargerResultats();
-            }}
-          >
-            <Icon type="trophy" />
-            <span>Mes résultats</span>
-          </button>
+          
         </div>
       )}
 

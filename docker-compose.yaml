@@ -5,6 +5,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     environment:
+      TZ: America/Toronto
       MYSQL_ROOT_PASSWORD: yannick
       MYSQL_DATABASE: examgu
     ports:
@@ -12,7 +13,7 @@ services:
     networks:
       - examgu-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$MYSQL_ROOT_PASSWORD --silent"]
       interval: 5s
       timeout: 3s
       retries: 30
@@ -22,6 +23,9 @@ services:
     image: 17yannick17/examgu-backend:latest
     restart: unless-stopped
     environment:
+      TZ: America/Toronto
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=America/Toronto"
+      SPRING_JPA_OPEN_IN_VIEW: "true"
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/examgu?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: yannick
@@ -31,11 +35,13 @@ services:
       - examgu-network
     depends_on:
       mysql:
-        condition: service_started
+        condition: service_healthy
 
   frontend:
     image: 17yannick17/examgu-frontend:latest
     restart: unless-stopped
+    environment:
+      TZ: America/Toronto
     build:
       context: ./frontend
       dockerfile: Dockerfile

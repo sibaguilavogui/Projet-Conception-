@@ -18,7 +18,7 @@ const ExamenComposition = ({ examen, tentativeId, onSoumettre, onQuitter }) => {
   const chargerQuestions = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/tentatives/${tentativeId}/questions`, {
+      const response = await fetch(`/api/tentatives/${tentativeId}/questions`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -63,7 +63,7 @@ const ExamenComposition = ({ examen, tentativeId, onSoumettre, onQuitter }) => {
     setSauvegardeEnCours(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/tentatives/${tentativeId}/save-reponse`, {
+      const response = await fetch(`/api/tentatives/${tentativeId}/save-reponse`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -89,7 +89,7 @@ const ExamenComposition = ({ examen, tentativeId, onSoumettre, onQuitter }) => {
   const updateTempsRestant = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/tentatives/${tentativeId}/statut-temps-reel`, {
+      const response = await fetch(`/api/tentatives/${tentativeId}/statut-temps-reel`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -118,7 +118,7 @@ const ExamenComposition = ({ examen, tentativeId, onSoumettre, onQuitter }) => {
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/tentatives/${tentativeId}/soumettre`, {
+      const response = await fetch(`/api/tentatives/${tentativeId}/soumettre`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

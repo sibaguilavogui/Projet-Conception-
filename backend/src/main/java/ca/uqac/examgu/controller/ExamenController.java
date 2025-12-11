@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/examens")
+@RequestMapping("/api/examens")
 public class ExamenController {
     private final ExamenService examenService;
     private final QuestionService questionService;
@@ -423,12 +423,10 @@ public class ExamenController {
             Examen examen = examenService.trouverParId(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
 
-            // Vérifier que l'enseignant est le créateur
             if (!examen.getCreateur().getId().equals(enseignant.getId())) {
                 return ResponseEntity.status(403).body("Vous n'êtes pas le créateur de cet examen");
             }
 
-            // Supprimer l'examen en utilisant le service
             examenService.supprimerExamen(examenId, enseignant);
 
             Map<String, Object> response = new HashMap<>();
@@ -483,7 +481,6 @@ public class ExamenController {
             response.put("tempsRestant", tentative.tempsRestant());
             response.put("estNouvelleTentative", tentative.getDateCreation().isAfter(LocalDateTime.now().minusMinutes(1)));
 
-            // Inclure les réponses existantes si c'est une tentative récupérée
             if (tentative.getReponses() != null && !tentative.getReponses().isEmpty()) {
                 List<Map<String, Object>> reponsesExistantes = tentative.getReponses().stream()
                         .map(r -> {
@@ -549,7 +546,6 @@ public class ExamenController {
             Examen examen = examenService.trouverParId(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
 
-            // Vérifier que l'enseignant est le créateur
             if (!examen.getCreateur().getId().equals(enseignantId)) {
                 return ResponseEntity.status(403).body("Accès refusé");
             }
@@ -576,12 +572,10 @@ public class ExamenController {
             Examen examen = examenService.trouverParId(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
 
-            // Vérifier que l'enseignant est le créateur
             if (!examen.getCreateur().getId().equals(enseignantId)) {
                 return ResponseEntity.status(403).body("Accès refusé");
             }
 
-            // Vérifier que l'examen est terminé
             if (examen.getDateFin() != null && examen.getDateFin().isAfter(LocalDateTime.now())) {
                 return ResponseEntity.badRequest()
                         .body("La publication des notes n'est disponible qu'après la date de fin de l'examen");
@@ -610,7 +604,6 @@ public class ExamenController {
             Examen examen = examenService.trouverParId(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
 
-            // Vérifier que l'enseignant est le créateur
             if (!examen.getCreateur().getId().equals(enseignantId)) {
                 return ResponseEntity.status(403).body("Accès refusé");
             }
@@ -659,17 +652,14 @@ public class ExamenController {
             Examen examen = examenService.trouverParId(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
 
-            // Vérifier que l'enseignant est le créateur
             if (!examen.getCreateur().getId().equals(enseignantId)) {
                 return ResponseEntity.status(403).body("Accès refusé");
             }
 
-            // Vérifier que l'examen est terminé
             if (examen.getDateFin() != null && examen.getDateFin().isAfter(LocalDateTime.now())) {
                 return ResponseEntity.badRequest().body("La correction automatique n'est disponible qu'après la date de fin de l'examen");
             }
 
-            // Corriger automatiquement toutes les tentatives
             Map<String, Object> resultat = examenService.corrigerAutomatiquement(examenId);
 
             Map<String, Object> response = new HashMap<>();
@@ -736,7 +726,6 @@ public class ExamenController {
                     return ResponseEntity.status(403).body("Seul le créateur de l'examen peut voir les questions");
                 }
 
-                // Retourner les questions avec toutes les informations (y compris les réponses correctes)
                 List<Map<String, Object>> questions = convertirQuestionsPourEnseignant(examen);
                 return ResponseEntity.ok(questions);
 
@@ -744,22 +733,18 @@ public class ExamenController {
                 Etudiant etudiant = etudiantService.findByEmail(email)
                         .orElseThrow(() -> new RuntimeException("Étudiant non trouvé"));
 
-                // Vérifier si l'étudiant est inscrit à l'examen
                 if (!examen.estInscrit(etudiant)) {
                     return ResponseEntity.status(403).body("Vous n'êtes pas inscrit à cet examen");
                 }
 
-                // Vérifier si l'examen est disponible pour l'étudiant
                 if (!examen.estDisponible()) {
                     return ResponseEntity.status(403).body("L'examen n'est pas disponible actuellement");
                 }
 
-                // Retourner les questions sans les réponses correctes pour les QCM
                 List<Map<String, Object>> questions = convertirQuestionsPourEtudiant(examen);
                 return ResponseEntity.ok(questions);
 
             } else if (estAdmin) {
-                // Admin peut voir toutes les informations
                 List<Map<String, Object>> questions = convertirQuestionsPourEnseignant(examen);
                 return ResponseEntity.ok(questions);
             }
@@ -783,15 +768,12 @@ public class ExamenController {
             Examen examen = examenService.trouverParId(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
 
-            // Vérifier que l'enseignant est le créateur
             if (!examen.getCreateur().getId().equals(enseignantId)) {
                 return ResponseEntity.status(403).body("Accès refusé");
             }
 
-            // Récupérer toutes les tentatives de l'examen
             List<Tentative> tentatives = tentativeService.getTentativesExamen(examenId, enseignantId);
 
-            // Filtrer les tentatives non corrigées
             List<UUID> tentativesNonCorrigees = tentatives.stream()
                     .filter(t -> !t.isEstCorrigee())
                     .map(Tentative::getId)
@@ -822,15 +804,12 @@ public class ExamenController {
             Examen examen = examenService.trouverParId(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
 
-            // Vérifier que l'enseignant est le créateur
             if (!examen.getCreateur().getId().equals(enseignantId)) {
                 return ResponseEntity.status(403).body("Accès refusé");
             }
 
-            // Récupérer toutes les tentatives de l'examen
             List<Tentative> tentatives = tentativeService.getTentativesExamen(examenId, enseignantId);
 
-            // Vérifier si toutes les tentatives sont corrigées
             boolean toutesCorrigees = true;
             List<UUID> tentativesNonCorrigees = new ArrayList<>();
 
@@ -909,7 +888,6 @@ public class ExamenController {
                         questionMap.put("typeChoix", qChoix.getTypeChoix());
                         questionMap.put("politiqueCorrectionQCM", qChoix.getPolitiqueCorrectionQCM());
 
-                        // Ajouter les réponses possibles avec l'information de correction
                         List<Map<String, Object>> options = qChoix.getReponsesPossibles().stream()
                                 .map(rp -> {
                                     Map<String, Object> optionMap = new HashMap<>();
@@ -945,13 +923,11 @@ public class ExamenController {
                         questionMap.put("typeChoix", qChoix.getTypeChoix());
                         questionMap.put("politiqueCorrectionQCM", qChoix.getPolitiqueCorrectionQCM());
 
-                        // Pour les étudiants, ne pas inclure l'information de correction
                         List<Map<String, Object>> options = qChoix.getReponsesPossibles().stream()
                                 .map(rp -> {
                                     Map<String, Object> optionMap = new HashMap<>();
                                     optionMap.put("id", rp.getId());
                                     optionMap.put("libelle", rp.getLibelle());
-                                    // Note: Ne pas inclure "correcte" pour les étudiants
                                     return optionMap;
                                 })
                                 .collect(Collectors.toList());

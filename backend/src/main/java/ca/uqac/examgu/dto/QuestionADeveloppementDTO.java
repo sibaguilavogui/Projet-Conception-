@@ -10,7 +10,6 @@ public class QuestionADeveloppementDTO {
     private double bareme;
     private UUID examenId;
 
-    // Constructeurs
     public QuestionADeveloppementDTO() {}
 
     public QuestionADeveloppementDTO(UUID id, String enonce, double bareme,
@@ -21,7 +20,6 @@ public class QuestionADeveloppementDTO {
         this.examenId = examenId;
     }
 
-    // Getters et Setters
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 

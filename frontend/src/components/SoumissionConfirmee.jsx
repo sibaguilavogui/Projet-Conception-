@@ -31,18 +31,6 @@ const SoumissionConfirmee = ({ examen, tentative, onRetour }) => {
     });
   };
 
-  const calculerPourcentage = () => {
-    if (!score || !examen.totalPoints) return 0;
-    return (score / examen.totalPoints) * 100;
-  };
-
-  const getNoteBadgeClass = (pourcentage) => {
-    if (pourcentage >= 80) return 'note-excellente';
-    if (pourcentage >= 60) return 'note-bonne';
-    if (pourcentage >= 40) return 'note-moyenne';
-    return 'note-faible';
-  };
-
   return (
     <div className="soumission-confirmee">
       <div className="confirmation-header">

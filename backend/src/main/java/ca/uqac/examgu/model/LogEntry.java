@@ -20,7 +20,7 @@ public class LogEntry {
     private String utilisateur;
     private String details;
     @Column(nullable = false)
-    private LocalDateTime timestamp = LocalDateTime.now(); // Initialisez par défaut
+    private LocalDateTime timestamp = LocalDateTime.now();
 
     public LogEntry() {}
 

@@ -44,33 +44,25 @@ public class TentativeService {
             throw new IllegalStateException("L'examen n'est pas disponible en ce moment");
         }
 
-        // Chercher une tentative existante pour cet étudiant et cet examen
         Optional<Tentative> tentativeExistante = tentativeRepository
                 .findByExamenIdAndEtudiantId(examenId, etudiantId);
 
         if (tentativeExistante.isPresent()) {
             Tentative tentative = tentativeExistante.get();
 
-            // Si la tentative est en cours et la deadline n'est pas atteinte
             if (tentative.getStatut() == StatutTentative.EN_COURS && !tentative.estExpiree()) {
                 return tentative; // Retourner la tentative existante avec ses réponses sauvegardées
             }
 
-            // Si la tentative est en cours mais expirée, ne pas la soumettre automatiquement
-            // Laissez l'étudiant voir qu'elle est expirée
             if (tentative.getStatut() == StatutTentative.EN_COURS && tentative.estExpiree()) {
-                // Retourner la tentative expirée sans la soumettre
-                // L'étudiant pourra voir qu'elle est expirée mais pas la modifier
                 return tentative;
             }
 
-            // Si la tentative est déjà soumise, la retourner
             if (tentative.getStatut() == StatutTentative.SOUMISE) {
                 return tentative;
             }
         }
 
-        // Créer une nouvelle tentative
         Tentative nouvelleTentative = new Tentative(examen, etudiant);
         nouvelleTentative.demarrer();
         return tentativeRepository.save(nouvelleTentative);
@@ -178,7 +170,6 @@ public class TentativeService {
             throw new IllegalStateException("Cette tentative ne peut pas être corrigée");
         }
 
-        // Filtrer les réponses pour ne garder que les questions à développement
         List<ReponseDonnee> reponsesDevOnly = tentative.getReponses().stream()
                 .filter(reponse -> reponse.getQuestion().getType().equals("DEVELOPPEMENT"))
                 .collect(Collectors.toList());
@@ -203,7 +194,6 @@ public class TentativeService {
 
         reponse.noterPatiellement(note, commentaire);
 
-        // Si toutes les questions sont corrigées, marquer la tentative comme corrigée
         boolean toutesCorrigees = tentative.getReponses().stream()
                 .allMatch(ReponseDonnee::isEstCorrigee);
 
@@ -242,12 +232,9 @@ public class TentativeService {
 
         for (Tentative tentative : tentativesEnCours) {
             try {
-                // Sauvegarder la tentative
                 tentativeRepository.save(tentative);
 
-                // Vérifier si la deadline est atteinte
                 if (tentative.estExpiree()) {
-                    // Soumettre automatiquement la tentative
                     tentative.soumettre();
                     tentativeRepository.save(tentative);
                     System.out.println("Tentative " + tentative.getId() + " soumise automatiquement (deadline atteinte)");

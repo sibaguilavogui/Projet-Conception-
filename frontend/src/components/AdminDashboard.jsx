@@ -34,7 +34,7 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/etudiants', {
+      const response = await fetch('/api/etudiants', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -59,7 +59,7 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/enseignants', {
+      const response = await fetch('/api/enseignants', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -84,7 +84,7 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/examens', {
+      const response = await fetch('/api/examens', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -109,7 +109,7 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/inscriptions`, {
+      const response = await fetch(`/api/examens/${examenId}/inscriptions`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -136,10 +136,10 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      let url = 'http://localhost:8080/admin/logs';
+      let url = '/api/admin/logs';
       
       if (emailFilter) {
-        url = `http://localhost:8080/admin/logs-par-user?email=${encodeURIComponent(emailFilter)}`;
+        url = `/api/admin/logs-par-user?email=${encodeURIComponent(emailFilter)}`;
       }
       
       const response = await fetch(url, {
@@ -168,7 +168,7 @@ const AdminDashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/etudiants', {
+      const response = await fetch('/api/etudiants', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -208,7 +208,7 @@ const AdminDashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/enseignants', {
+      const response = await fetch('/api/enseignants', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -249,7 +249,7 @@ const AdminDashboard = () => {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/etudiants/${id}`, {
+      const response = await fetch(`/api/etudiants/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -270,7 +270,7 @@ const AdminDashboard = () => {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/enseignants/${id}`, {
+      const response = await fetch(`/api/enseignants/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -308,7 +308,7 @@ const AdminDashboard = () => {
         return;
       }
 
-      const response = await fetch(`http://localhost:8080/examens/${selectedExamen.id}/${etudiant.id}`, {
+      const response = await fetch(`/api/examens/${selectedExamen.id}/${etudiant.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -332,7 +332,7 @@ const AdminDashboard = () => {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${selectedExamen.id}/${etudiantId}`, {
+      const response = await fetch(`/api/examens/${selectedExamen.id}/${etudiantId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

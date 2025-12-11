@@ -428,6 +428,7 @@ public class Examen {
         this.etat = etat;
     }
 
+    @JsonIgnore
     public Enseignant getCreateur() {
         return createur;
     }
@@ -436,6 +437,7 @@ public class Examen {
         this.createur = createur;
     }
 
+    @JsonIgnore
     public List<Question> getQuestions() {
         return Collections.unmodifiableList(questions);
     }
@@ -448,6 +450,7 @@ public class Examen {
         }
     }
 
+    @JsonIgnore
     public List<Inscription> getInscriptions() {
         return Collections.unmodifiableList(inscriptions);
     }

@@ -3,7 +3,7 @@ import './EnseignantDashboard.css';
 
 const EnseignantDashboard = () => {
   const [activeTab, setActiveTab] = useState('mes-examens');
-  const [modificationMode, setModificationMode] = useState('infos'); // 'infos', 'planifier', 'questions'
+  const [modificationMode, setModificationMode] = useState('infos'); 
   const [examens, setExamens] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -80,7 +80,7 @@ const EnseignantDashboard = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/examens', {
+      const response = await fetch('/api/examens', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -94,7 +94,7 @@ const EnseignantDashboard = () => {
         const examensAvecQuestions = await Promise.all(
           data.map(async (examen) => {
             try {
-              const questionsResponse = await fetch(`http://localhost:8080/examens/${examen.id}/questions`, {
+              const questionsResponse = await fetch(`/api/examens/${examen.id}/questions`, {
                 method: 'GET',
                 headers: {
                   'Authorization': `Bearer ${token}`,
@@ -142,7 +142,7 @@ const EnseignantDashboard = () => {
   const chargerQuestionsDeveloppement = async (tentativeId) => {
       try {
           const token = localStorage.getItem('token');
-          const response = await fetch(`http://localhost:8080/tentatives/${tentativeId}/questions-developpement`, {
+          const response = await fetch(`/api/tentatives/${tentativeId}/questions-developpement`, {
               method: 'GET',
               headers: {
                   'Authorization': `Bearer ${token}`,
@@ -187,7 +187,7 @@ const EnseignantDashboard = () => {
               commentaire: commentairesCorrection[question.id] || ''
           }));
           
-          const response = await fetch(`http://localhost:8080/tentatives/${tentativeId}/corriger-developpement`, {
+          const response = await fetch(`/api/tentatives/${tentativeId}/corriger-developpement`, {
               method: 'POST',
               headers: {
                   'Authorization': `Bearer ${token}`,
@@ -218,7 +218,7 @@ const EnseignantDashboard = () => {
   const chargerQuestions = async (examenId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/questions`, {
+      const response = await fetch(`/api/examens/${examenId}/questions`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -250,7 +250,7 @@ const EnseignantDashboard = () => {
   const chargerToutesLesTentatives = async (examenId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/tentatives`, {
+      const response = await fetch(`/api/examens/${examenId}/tentatives`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -286,7 +286,7 @@ const EnseignantDashboard = () => {
   const chargerTentativesACorriger = async (examenId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/tentatives-a-corriger`, {
+      const response = await fetch(`/api/examens/${examenId}/tentatives-a-corriger`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -318,7 +318,7 @@ const EnseignantDashboard = () => {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/examens', {
+      const response = await fetch('/api/examens', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -353,7 +353,7 @@ const EnseignantDashboard = () => {
   const modifierExamen = async (examenId, donnees) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}`, {
+      const response = await fetch(`/api/examens/${examenId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -382,7 +382,7 @@ const EnseignantDashboard = () => {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}`, {
+      const response = await fetch(`/api/examens/${examenId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -406,7 +406,7 @@ const EnseignantDashboard = () => {
   const planifierExamen = async (examenId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/planifier`, {
+      const response = await fetch(`/api/examens/${examenId}/planifier`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -492,8 +492,8 @@ const EnseignantDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       const endpoint = nouvelleQuestion.type === 'choix' 
-        ? `http://localhost:8080/examens/${examenId}/question-choix`
-        : `http://localhost:8080/examens/${examenId}/question-developpement`;
+        ? `/api/examens/${examenId}/question-choix`
+        : `/api/examens/${examenId}/question-developpement`;
       
       const body = nouvelleQuestion.type === 'choix' ? {
         enonce: nouvelleQuestion.enonce,
@@ -557,7 +557,7 @@ const EnseignantDashboard = () => {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/questions/${questionId}`, {
+      const response = await fetch(`/api/examens/${examenId}/questions/${questionId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -595,7 +595,7 @@ const EnseignantDashboard = () => {
     
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:8080/examens/${examenId}/marquer-pret`, {
+        const response = await fetch(`/api/examens/${examenId}/marquer-pret`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -685,7 +685,7 @@ const EnseignantDashboard = () => {
   const afficherDetailsExamen = async (examen) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examen.id}`, {
+      const response = await fetch(`/api/examens/${examen.id}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -696,7 +696,7 @@ const EnseignantDashboard = () => {
       if (response.ok) {
         const examenDetail = await response.json();
         
-        const questionsResponse = await fetch(`http://localhost:8080/examens/${examen.id}/questions`, {
+        const questionsResponse = await fetch(`/api/examens/${examen.id}/questions`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -754,7 +754,7 @@ const EnseignantDashboard = () => {
         return;
       }
       
-      const response = await fetch(`http://localhost:8080/tentatives/${tentativeEnCorrection.id}/reponses/${question.reponse.id}/corriger-developpement`, {
+      const response = await fetch(`/api/tentatives/${tentativeEnCorrection.id}/reponses/${question.reponse.id}/corriger-developpement`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -794,7 +794,7 @@ const EnseignantDashboard = () => {
   const verifierExamenTermine = async (examenId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/est-termine`, {
+      const response = await fetch(`/api/examens/${examenId}/est-termine`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -828,7 +828,7 @@ const EnseignantDashboard = () => {
       const token = localStorage.getItem('token');
       
       // Charger l'examen
-      const examenResponse = await fetch(`http://localhost:8080/examens/${examenId}`, {
+      const examenResponse = await fetch(`/api/examens/${examenId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -857,7 +857,7 @@ const EnseignantDashboard = () => {
   const chargerStatsCorrection = async (examenId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/tentatives`, {
+      const response = await fetch(`/api/examens/${examenId}/tentatives`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -907,7 +907,7 @@ const EnseignantDashboard = () => {
     setCorrectionEnCours(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/corriger-automatiquement`, {
+      const response = await fetch(`/api/examens/${examenId}/corriger-automatiquement`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -934,7 +934,7 @@ const EnseignantDashboard = () => {
   const calculerNotesFinales = async (examenId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/calculer-notes-finales`, {
+      const response = await fetch(`/api/examens/${examenId}/calculer-notes-finales`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -957,7 +957,7 @@ const EnseignantDashboard = () => {
   const publierNotes = async (examenId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/publier-notes`, {
+      const response = await fetch(`/api/examens/${examenId}/publier-notes`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -982,7 +982,7 @@ const EnseignantDashboard = () => {
   const masquerNotes = async (examenId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/examens/${examenId}/masquer-notes`, {
+      const response = await fetch(`/api/examens/${examenId}/masquer-notes`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

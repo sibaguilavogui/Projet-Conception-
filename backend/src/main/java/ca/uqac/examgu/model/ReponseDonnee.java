@@ -85,9 +85,9 @@ public class ReponseDonnee {
                             question.getBareme()));
         }
 
-        this.notePartielle = note;
+        setNotePartielle(note);
         this.commentaire = commentaire;
-        this.estCorrigee = true;
+        setEstCorrigee(true);
         this.dateCorrection = LocalDateTime.now();
     }
 
@@ -160,12 +160,6 @@ public class ReponseDonnee {
             throw new IllegalArgumentException("La note ne peut pas être négative");
         }
         this.notePartielle = notePartielle;
-        if (notePartielle > 0) {
-            this.estCorrigee = true;
-            if (this.dateCorrection == null) {
-                this.dateCorrection = LocalDateTime.now();
-            }
-        }
     }
 
     public boolean isEstCorrigee() {
